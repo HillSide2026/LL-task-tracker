@@ -10,32 +10,32 @@ type FeatureItem = {
 
 const FeatureList: FeatureItem[] = [
   {
-    title: "Adaptive Case Management",
+    title: "Matter Opening",
     Svg: require("@site/static/img/chamaleon.svg").default,
     description: (
       <>
-        Agile, flexible approach for unpredictable scenarios, driven by
-        knowledge workers.
+        Intake, engagement readiness, conflicts checks, and responsible lawyer
+        assignment.
       </>
     ),
   },
   {
-    title: "Flexible Workflow Automation",
+    title: "Lawyer Review",
     Svg: require("@site/static/img/camunda-logo-dark.svg").default,
     description: (
       <>
-        Empowering adaptive case management and process automation synergy
-        integrated with Camunda.
+        Structured approval and return-for-fixes steps before a matter moves
+        into active work.
       </>
     ),
   },
   {
-    title: "Open-source",
+    title: "Matter Maintenance",
     Svg: require("@site/static/img/padlock.svg").default,
     description: (
       <>
-        Collaboration, transparency, innovation, and cost-effectiveness,
-        benefiting from a community-driven approach to continuous improvement.
+        Client waits, external waits, lawyer follow-ups, health flags, and
+        operational exception queues.
       </>
     ),
   },

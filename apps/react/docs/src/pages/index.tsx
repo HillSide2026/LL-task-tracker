@@ -19,7 +19,7 @@ function HomepageHeader() {
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg"
-            to="/docs/Introduction">
+            to="/docs/intro">
             Documentation
           </Link>
         </div>
@@ -33,7 +33,7 @@ export default function Home(): JSX.Element {
   return (
     <Layout
       title={`${siteConfig.title}`}
-      description="WKS Power">
+      description="Levine LLP internal matter operations documentation">
       <HomepageHeader />
       <main>
         <HomepageFeatures />

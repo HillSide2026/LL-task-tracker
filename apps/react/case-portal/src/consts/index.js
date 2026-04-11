@@ -1,8 +1,12 @@
 console.log(process.env.NODE_ENV)
 
 const Config = {
-  CaseEngineUrl: getEnv(process.env.REACT_APP_API_URL, window.API_URL),
-  LoginUrl: getEnv(process.env.REACT_APP_KEYCLOAK_URL, window.KEYCLOAK_URL),
+  CaseEngineUrl: getEnv(process.env.REACT_APP_API_URL, window.API_URL, '/api'),
+  LoginUrl: getEnv(
+    process.env.REACT_APP_KEYCLOAK_URL,
+    window.KEYCLOAK_URL,
+    '/auth',
+  ),
   StorageUrl: getEnv(process.env.REACT_APP_STORAGE_URL, window.STORAGE_URL),
   WebsocketsEnabled: getEnv(
     process.env.REACT_APP_WEBSOCKETS_ENABLED,
@@ -51,14 +55,27 @@ async function fetchNovuAppId() {
   }
 }
 
-function getEnv(key, defaultValue) {
+function getEnv(key, defaultValue, fallback = '') {
   const isDev = process.env.NODE_ENV === 'development'
 
   if (isDev && !!key) {
-    return key
+    return normalizeEnv(key, fallback)
   }
 
-  return defaultValue
+  return normalizeEnv(defaultValue, fallback)
+}
+
+function normalizeEnv(value, fallback) {
+  if (value === undefined || value === null) {
+    return fallback
+  }
+
+  const normalized = String(value).trim()
+  if (!normalized || normalized.startsWith('$__SERVER_')) {
+    return fallback
+  }
+
+  return normalized
 }
 
 export default Config

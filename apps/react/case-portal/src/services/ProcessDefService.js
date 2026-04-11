@@ -1,5 +1,4 @@
-import { json } from './request'
-import Config from 'consts/index'
+import { ProcessDefinitionApi } from '../api'
 
 export const ProcessDefService = {
   start,
@@ -8,19 +7,12 @@ export const ProcessDefService = {
 }
 
 async function start(keycloak, procDefKey, businessKey) {
-  const url = `${Config.CaseEngineUrl}/process-definition/key/${procDefKey}/start`
-
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify({ businessKey: businessKey }),
-    })
-    return json(keycloak, resp)
+    return ProcessDefinitionApi.startProcessDefinition(
+      keycloak,
+      procDefKey,
+      businessKey,
+    )
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -28,19 +20,8 @@ async function start(keycloak, procDefKey, businessKey) {
 }
 
 async function find(keycloak) {
-  if (keycloak.isTokenExpired()) {
-    keycloak.logout({ redirectUri: window.location.origin })
-  }
-
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
-  var url = `${Config.CaseEngineUrl}/process-definition`
-
   try {
-    const resp = await fetch(url, { headers })
-    return json(keycloak, resp)
+    return ProcessDefinitionApi.findProcessDefinitions(keycloak)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -48,15 +29,8 @@ async function find(keycloak) {
 }
 
 async function getBPMNXml(keycloak, processDefId) {
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
-  var url = `${Config.CaseEngineUrl}/process-definition/${processDefId}/xml`
-
   try {
-    const resp = await fetch(url, { headers })
-    return json(keycloak, resp.text())
+    return ProcessDefinitionApi.getProcessDefinitionXml(keycloak, processDefId)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)

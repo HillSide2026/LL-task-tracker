@@ -1,118 +1,120 @@
-# WKS Platform
+# LL Task Tracker
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+Levine LLP's matter platform for internal matter opening, lawyer review, client/external wait tracking, and ongoing matter maintenance.
 
-> ## ⚠️ CRITICAL NOTE — Spring Boot 4 & Camunda 7 Compatibility
-> **Action required:** plan your migration to Spring Boot 4.x to avoid CI/CD interruptions and security-driven deployment blocks.
-> Camunda 7 environments require targeted architectural refactoring to remain compliant with modern security scanners.
->
-> [![Contact for a Transition Action Plan](https://img.shields.io/badge/Get%20the%20Transition%20Action%20Plan-orange?style=for-the-badge)](https://wkspower.com/contact-us-wks-platform)
+This repository has been re-homed as `LL-task-tracker`. It currently combines a Levine LLP matter-management layer with an upstream-derived case management and workflow platform. The visible product surface is the Levine LLP matter portal; some lower-level service names, Java packages, environment variable names, and policy paths still retain upstream WKS identifiers while the codebase is being separated safely.
 
-[On-line documentation](https://docs.wkspower.com/docs/Introduction/)
+## Current Product Surface
 
-[Contact Form](https://share-eu1.hsforms.com/1tpt0kdYDS5CbimQTH7xmVA2dcag3)
+- Matter portal: `https://matters.levinellp.ca`
+- Deployment entrypoint: `deployments/levinellp`
+- Primary UI app: `apps/react/case-portal`
+- Primary backend API: `apps/java/services/case-engine-rest-api`
+- Case engine library: `apps/java/libraries/case-engine`
+- Matter seed data: `apps/java/services/demo-data-loader/data`
+- Authorization policy: `opa/wks_policy_rules.rego`
 
-[Subscribe for news & updates](https://share-eu1.hsforms.com/1gpWZRXQwSoWQNgCeuztetQ2dcag3)
+## What This Repo Runs
 
-Table of Contents
------------------
-- [WKS Platform](#wks-platform)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
-  - [Installation](#installation)
-  - [Diagrams](#diagrams)
-    - [Architecture overview](#architecture-overview)
-    - [Case Definition structure](#case-definition-structure)
-    - [Event Hub](#event-hub)
-  - [Screenshots](#screenshots)
-  - [License](#license)
-  - [Contact](#contact)
+The Levine LLP matter platform uses:
 
-WKS Platform is an open-source Case Management and Process Automation solution that leverages a powerful stack of technologies, including Camunda, MongoDB, Keycloak, Traefik, MinIO, OPA (Open Policy Agent), Form.io, Spring Boot, and React. It provides a comprehensive framework for managing and automating business processes, enabling organizations to streamline their operations, enhance efficiency, and improve decision-making.
+- React for the matter portal.
+- Spring Boot services for case, form, record, storage, and workflow APIs.
+- Camunda 7 for the current Levine deployment workflow runtime.
+- MongoDB for tenant matter data.
+- Keycloak for identity and realm roles.
+- OPA for API authorization decisions.
+- MinIO-compatible object storage for matter documents.
+- Traefik for the Levine deployment edge router.
 
-WKS Platform is ideal for organizations in various industries, including but not limited to:
-- **Financial Services**: Streamline and automate complex financial processes, such as loan approvals, claims management, and risk assessment.
-- **Healthcare**: Efficiently manage patient cases, automate healthcare processes, and ensure compliance with regulatory requirements.
-- **Insurance**: Automate insurance claims processing, underwriting, policy management, and enhance customer service.
-- **Manufacturing**: Streamline production workflows, manage quality control processes, and improve supply chain management.
-- **Government**: Automate administrative processes, citizen service requests, and regulatory compliance procedures.
-- **Education**: Simplify student enrollment, course registration, and academic workflows.
+Camunda 8, Novu, websocket, and email-to-case support still exist in the repository as upstream-derived platform capabilities. They should be reviewed before being treated as part of the Levine production operating model.
 
-These are just a few examples of the industry-specific scenarios where WKS Platform can be effectively utilized. Its flexibility and extensibility make it suitable for a wide range of use cases.
+## Levine LLP Matter Layer
 
-WKS Platform is designed as a multi-tenant solution, allowing multiple organizations or departments to use the platform while ensuring data isolation and separation. It provides a secure and customizable environment for each tenant, enabling them to manage their cases, automate processes, and make data-driven decisions within their own dedicated space.
+The matter-specific layer is centered around the `matter-admin-opening-control` case definition and lifecycle.
 
-## Features
+It includes:
 
-- **Case Management**: WKS Platform offers a robust case management system that allows users to track and manage cases throughout their lifecycle. It provides features such as case creation, assignment, status tracking, activity logging, and case resolution.
+- Intake review.
+- Engagement and conflicts readiness.
+- Responsible lawyer assignment.
+- Lawyer opening review.
+- Client and external waiting states.
+- Matter activation.
+- Maintenance follow-up and exception queues.
 
-- **Process Automation**: With Camunda at its core, WKS Platform enables the automation of complex business processes. Users can design, model, and execute workflows, define process steps and decision points, and monitor process instances in real-time.
+Important implementation areas:
 
-- **Intuitive User Interface**: WKS Platform incorporates a responsive and user-friendly React-based frontend interface. It provides a rich set of features, including task management, case visualization, process monitoring, and reporting, ensuring an intuitive user experience.
+- `apps/java/libraries/case-engine/src/main/java/com/wks/caseengine/cases/instance/admin`
+- `apps/java/libraries/case-engine/src/main/java/com/wks/caseengine/cases/instance/command/TransitionCaseAdminCmd.java`
+- `apps/react/case-portal/src/common/adminLifecycle.js`
+- `apps/react/case-portal/src/routes/MainRoutes.js`
+- `apps/react/case-portal/src/views/dashboard`
+- `apps/java/services/demo-data-loader/data/camunda7/levinellp`
+- `apps/java/services/demo-data-loader/data/mongodb/mongo-levinellp-matter-collections.json`
 
-- **Dynamic Form Creation**: By leveraging Form.io, WKS Platform allows users to design and create dynamic forms that adapt to specific case requirements. This empowers organizations to collect structured data efficiently, ensuring data consistency and enabling streamlined processes.
+## Deployment
 
-- **Data Persistence**: Leveraging MongoDB, WKS Platform ensures reliable and scalable data storage for case-related information. This facilitates efficient retrieval and analysis of data to gain insights and support decision-making.
+The Levine deployment guide is the source of truth for operator setup:
 
-- **Identity and Access Management**: Integration with Keycloak offers robust identity and access management capabilities, including user authentication, authorization, and role-based access control. This ensures secure access to the platform and its features, protecting sensitive information.
+```sh
+deployments/levinellp/README.md
+```
 
-- **Policy Enforcement**: WKS Platform integrates with OPA (Open Policy Agent) to enforce fine-grained policies across the system. Policies can be defined to control access, validate data, enforce business rules, and ensure compliance with organizational regulations.
+Start the Levine stack from the repository root:
 
-- **MinIO Integration**: WKS Platform integrates with MinIO, an object storage server, for efficient and scalable storage of files and attachments associated with cases and processes.
+```sh
+docker compose \
+  --env-file deployments/levinellp/.env \
+  -f deployments/levinellp/docker-compose.camunda7.yml \
+  up -d --build
+```
 
-- **E-mail to Case**: WKS Platform includes a comprehensive E-mail to Case feature that enables seamless integration between email communication and case management. Users can not only create cases from incoming emails but also receive case-related updates and notifications via email, ensuring efficient and effective communication throughout the case lifecycle. 
+Bootstrap the initial realm, roles, demo user, matter definitions, forms, queues, and Camunda process:
 
-- **Robust Backend**: Built on the Spring Boot framework, WKS Platform provides a scalable and high-performance backend infrastructure. It offers reliable API endpoints, data integration capabilities, and supports extensibility through modular design principles.
-  
-- **Robust API Security with Trust-based Architecture**: WKS Platform prioritizes security and follows the principles of Zero Trust architecture. It ensures safe API communications by implementing secure protocols, encryption, and authentication mechanisms.
+```sh
+docker compose \
+  --env-file deployments/levinellp/.env \
+  -f deployments/levinellp/docker-compose.camunda7.yml \
+  --profile bootstrap \
+  run --rm demo-data-loader
+```
 
-- **Traefik Integration**: WKS Platform seamlessly integrates with Traefik, a modern reverse proxy and load balancer, to provide scalable and secure routing of HTTP traffic to the platform's components.
+## Local Development
 
-- **Multi-Language Support**: WKS Platform is designed to be a multi-language project, utilizing internationalization (i18n) techniques. This allows for the localization of the platform's interface, making it accessible and usable in different languages. Currently, it supports English and Brazilian Portuguese, with the potential to expand support for additional languages. 
+The root `docker-compose*.yaml` files and `scripts/` helpers are retained for local developer stacks. They still include upstream-compatible service and environment names. Use the Levine deployment folder for deployment-facing instructions.
 
-## Installation
+For local Java builds:
 
-[https://www.wkspower.com/docs/instalation-guide/](https://doc.wkspower.com/docs/Installation/Option%201%20Pre-built%20Docker%20Images/)
+```sh
+cd apps/java
+mvn -DskipTests package
+```
 
-## Diagrams 
+For the React matter portal:
 
-### Architecture overview
-<img width="840" alt="image" src="https://github.com/wkspower/wks-platform/assets/85225281/323e4811-2a44-4c23-9d38-1f99942dcae5">
+```sh
+cd apps/react/case-portal
+npm install
+npm run start
+```
 
+## Auth Model
 
-### Case Definition structure
-<img width="1507" alt="case-definition-structure" src="https://github.com/wkspower/wks-platform/assets/85225281/d478345f-8192-4196-ae53-868151363cf1">
+The matter portal currently uses these Levine operational roles:
 
-### Event Hub
-![image](https://github.com/wkspower/wks-platform/assets/85225281/1f393c1a-84b7-42d3-971b-0e9a49240d27)
+- `ops_admin`
+- `ops_manager`
+- `lawyer_user`
 
+The underlying platform also contains generic client, management, and email-to-case roles. Those are still used by the inherited authorization policy and should be rationalized in a later auth cleanup.
 
-## Screenshots
+## Upstream Derivation
 
-Form Designer
-<img width="1487" alt="image" src="https://github.com/wkspower/wks-platform/assets/85225281/9e28708b-0547-4e5f-bee1-5721f63186e7">
+This codebase remains substantially derived from WKS Platform internals. See [UPSTREAM.md](UPSTREAM.md) for provenance, retained identifiers, and deferred cleanup areas.
 
-Case kanban
-<img width="1507" alt="image" src="https://github.com/wkspower/wks-platform/assets/85225281/19ac1611-4328-466b-8574-72a33486edac">
+The original MIT license notice is preserved in [LICENSE](LICENSE).
 
-Task List in a Case
-<img width="1511" alt="image" src="https://github.com/wkspower/wks-platform/assets/85225281/0c437058-f63e-4d9a-b207-6758aa6a2486">
+## Cleanup Boundary
 
-Task Form
-<img width="1501" alt="image" src="https://github.com/wkspower/wks-platform/assets/85225281/55db2e63-64a9-45b8-8d3b-b231f4ac2c31">
-
-Process diagram in Task Form
-<img width="1488" alt="image" src="https://github.com/wkspower/wks-platform/assets/85225281/40342c86-451f-40cc-b820-3ae9ee9fc24e">
-
-Create ad-hoc tasks in cases
-<img width="1512" alt="image" src="https://github.com/wkspower/wks-platform/assets/85225281/cb98d635-66bd-4877-bcbc-06bac437eb45">
-
-## License
-
-WKS Platform is released under the [MIT License](LICENSE), allowing users to freely use, modify, and distribute the solution as per the terms of the license.
-
-## Contact
-
-For any questions, feedback, or contributions, please reach out to the project team:
-
-- Email: victor@wkspower.com
+Current cleanup work should stay focused on branding, operator clarity, seed-data ownership, and matter lifecycle isolation. Avoid broad Java package renames such as `com.wks`, deep service ID changes, or monorepo restructuring until the platform/product boundary is stable.

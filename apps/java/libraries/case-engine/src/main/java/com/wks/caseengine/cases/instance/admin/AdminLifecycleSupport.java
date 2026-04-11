@@ -14,6 +14,9 @@ import java.util.Optional;
 import com.wks.caseengine.cases.instance.CaseAttribute;
 import com.wks.caseengine.cases.instance.CaseInstance;
 
+/**
+ * Constants and helpers for the Levine LLP matter-admin lifecycle.
+ */
 public final class AdminLifecycleSupport {
 
 	public static final String CASE_DEFINITION_ID = "matter-admin-opening-control";

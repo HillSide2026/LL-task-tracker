@@ -1,5 +1,4 @@
-import Config from '../consts'
-import { json, nop } from './request'
+import { QueueApi } from '../api'
 
 export const QueueService = {
   find,
@@ -10,19 +9,8 @@ export const QueueService = {
 }
 
 async function save(keycloak, body) {
-  const url = `${Config.CaseEngineUrl}/queue`
-
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(body),
-    })
-    return nop(keycloak, resp)
+    return QueueApi.createQueue(keycloak, body)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -30,19 +18,8 @@ async function save(keycloak, body) {
 }
 
 async function update(keycloak, id, body) {
-  const url = `${Config.CaseEngineUrl}/queue/${id}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(body),
-    })
-    return nop(keycloak, resp)
+    return QueueApi.updateQueue(keycloak, id, body)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -50,18 +27,8 @@ async function update(keycloak, id, body) {
 }
 
 async function remove(keycloak, id) {
-  const url = `${Config.CaseEngineUrl}/queue/${id}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-    })
-    return nop(keycloak, resp)
+    return QueueApi.deleteQueue(keycloak, id)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -69,15 +36,8 @@ async function remove(keycloak, id) {
 }
 
 async function find(keycloak) {
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
-  var url = `${Config.CaseEngineUrl}/queue`
-
   try {
-    const resp = await fetch(url, { headers })
-    return json(keycloak, resp)
+    return QueueApi.findQueues(keycloak)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -85,15 +45,8 @@ async function find(keycloak) {
 }
 
 async function get(keycloak, id) {
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
-  var url = `${Config.CaseEngineUrl}/queue/${id}`
-
   try {
-    const resp = await fetch(url, { headers })
-    return json(keycloak, resp)
+    return QueueApi.getQueue(keycloak, id)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)

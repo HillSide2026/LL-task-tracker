@@ -1,5 +1,4 @@
-import { json, nop } from './request'
-import Config from '../consts'
+import { RecordApi } from '../api'
 
 export const RecordTypeService = {
   create,
@@ -9,17 +8,8 @@ export const RecordTypeService = {
 }
 
 async function getAll(keycloak) {
-  const url = `${Config.CaseEngineUrl}/record-type`
-
   try {
-    const resp = await fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-    })
-    return json(keycloak, resp)
+    return RecordApi.getRecordTypes(keycloak)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -27,19 +17,8 @@ async function getAll(keycloak) {
 }
 
 async function create(keycloak, data) {
-  const url = `${Config.CaseEngineUrl}/record-type`
-
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(data),
-    })
-    return nop(keycloak, resp)
+    return RecordApi.createRecordType(keycloak, data)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -47,19 +26,8 @@ async function create(keycloak, data) {
 }
 
 async function update(keycloak, id, data) {
-  const url = `${Config.CaseEngineUrl}/record-type/${id}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'PATCH',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(data),
-    })
-    return nop(keycloak, resp)
+    return RecordApi.updateRecordType(keycloak, id, data)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -67,18 +35,8 @@ async function update(keycloak, id, data) {
 }
 
 async function remove(keycloak, id) {
-  const url = `${Config.CaseEngineUrl}/record-type/${id}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-    })
-    return nop(keycloak, resp)
+    return RecordApi.deleteRecordType(keycloak, id)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)

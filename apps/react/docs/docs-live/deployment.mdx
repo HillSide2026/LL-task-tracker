@@ -1,0 +1,79 @@
+---
+id: deployment
+title: Deployment Runbook
+sidebar_position: 2
+---
+
+# Deployment Runbook
+
+## Prepare The Host
+
+Use a host with Docker Engine, Docker Compose v2, and public access to ports `80` and `443`.
+
+Create DNS records for:
+
+```text
+matters.levinellp.ca
+s3.matters.levinellp.ca
+```
+
+## Configure Environment
+
+Create the deployment environment file:
+
+```sh
+cp deployments/levinellp/.env.example deployments/levinellp/.env
+```
+
+Replace all template values before using the stack with real matter data.
+
+## Build Java Services
+
+```sh
+cd apps/java
+mvn -DskipTests package
+cd ../..
+```
+
+## Validate Compose
+
+```sh
+docker compose \
+  --env-file deployments/levinellp/.env \
+  -f deployments/levinellp/docker-compose.camunda7.yml \
+  config
+```
+
+## Start The Stack
+
+```sh
+docker compose \
+  --env-file deployments/levinellp/.env \
+  -f deployments/levinellp/docker-compose.camunda7.yml \
+  up -d --build
+```
+
+## Bootstrap Data
+
+```sh
+docker compose \
+  --env-file deployments/levinellp/.env \
+  -f deployments/levinellp/docker-compose.camunda7.yml \
+  --profile bootstrap \
+  run --rm demo-data-loader
+```
+
+## Verify
+
+```sh
+docker compose \
+  --env-file deployments/levinellp/.env \
+  -f deployments/levinellp/docker-compose.camunda7.yml \
+  ps
+```
+
+Check:
+
+- `https://matters.levinellp.ca/auth`
+- `https://matters.levinellp.ca/api/healthCheck`
+- `https://s3.matters.levinellp.ca/minio/health/live`

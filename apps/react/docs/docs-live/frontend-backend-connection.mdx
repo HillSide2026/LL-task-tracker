@@ -1,0 +1,53 @@
+---
+id: frontend-backend-connection
+title: Frontend Backend Connection
+sidebar_position: 5
+---
+
+# Frontend Backend Connection
+
+The browser talks to the Java case API through the same Levine LLP origin.
+
+```text
+Browser UI -> Keycloak login -> /api -> case-engine-rest-api -> case engine, data store, workflow workers
+```
+
+The browser must not call MongoDB, Camunda, seed loaders, or OPA directly.
+
+## Frontend
+
+Runtime configuration is injected into the React portal through `public/index.html`.
+
+Deployment values:
+
+- `__SERVER_KEYCLOAK_URL__=/auth` or `https://matters.levinellp.ca/auth`
+- `__SERVER_API_URL__=/api`
+- `__SERVER_STORAGE_URL__=https://matters.levinellp.ca`
+
+Local development can set:
+
+- `REACT_APP_KEYCLOAK_URL=http://localhost:8082`
+- `REACT_APP_API_URL=http://localhost:8081`
+- `REACT_APP_STORAGE_URL=http://localhost:8085`
+
+## Reverse Proxy
+
+The deployment proxy should route:
+
+- `/api/*` to `case-engine-rest-api`, stripping `/api`
+- `/auth/*` to Keycloak
+- `/storage/*` to the storage API
+
+The `/engine/*` API path is retained only as a temporary compatibility alias.
+
+## Backend Calls
+
+Start integration testing with these calls:
+
+- matter list: `GET /api/case?caseDefinitionId=matter-admin-opening-control`
+- matter detail: `GET /api/case/{businessKey}`
+- matter transition: `POST /api/case/{businessKey}/transition/{transitionName}`
+- case definitions: `GET /api/case-definition?deployed=true`
+- queues: `GET /api/queue`
+
+All API calls should include the current Keycloak bearer token and use centralized response handling for authentication, authorization, and operational errors.

@@ -1,5 +1,4 @@
-import { json, nop } from './request'
-import Config from '../consts'
+import { RecordApi } from '../api'
 
 export const RecordService = {
   getRecordTypeById,
@@ -12,15 +11,8 @@ export const RecordService = {
 }
 
 async function getRecordById(keycloak, id) {
-  const url = `${Config.CaseEngineUrl}/record/${id}`
-
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
   try {
-    const resp = await fetch(url, { headers })
-    return json(keycloak, resp)
+    return RecordApi.getRecords(keycloak, id)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -28,15 +20,8 @@ async function getRecordById(keycloak, id) {
 }
 
 async function getAllRecordTypes(keycloak) {
-  const url = `${Config.CaseEngineUrl}/record-type`
-
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
   try {
-    const resp = await fetch(url, { headers })
-    return json(keycloak, resp)
+    return RecordApi.getRecordTypes(keycloak)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -44,15 +29,8 @@ async function getAllRecordTypes(keycloak) {
 }
 
 async function getRecordTypeById(keycloak, id) {
-  const url = `${Config.CaseEngineUrl}/record-type/${id}`
-
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
   try {
-    const resp = await fetch(url, { headers })
-    return json(keycloak, resp)
+    return RecordApi.getRecordType(keycloak, id)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -60,19 +38,8 @@ async function getRecordTypeById(keycloak, id) {
 }
 
 async function createRecordType(keycloak, id, data) {
-  const url = `${Config.CaseEngineUrl}/record-type/${id}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(data),
-    })
-    return json(keycloak, resp)
+    return RecordApi.createRecordType(keycloak, data)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -80,19 +47,8 @@ async function createRecordType(keycloak, id, data) {
 }
 
 async function createRecord(keycloak, id, data) {
-  const url = `${Config.CaseEngineUrl}/record/${id}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(data),
-    })
-    return nop(keycloak, resp)
+    return RecordApi.createRecord(keycloak, id, data)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -100,19 +56,8 @@ async function createRecord(keycloak, id, data) {
 }
 
 async function updateRecord(keycloak, id, oid, data) {
-  const url = `${Config.CaseEngineUrl}/record/${id}/${oid}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'PATCH',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(data),
-    })
-    return nop(keycloak, resp)
+    return RecordApi.updateRecord(keycloak, id, oid, data)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -120,18 +65,8 @@ async function updateRecord(keycloak, id, oid, data) {
 }
 
 async function deleteRecord(keycloak, id, oid) {
-  const url = `${Config.CaseEngineUrl}/record/${id}/${oid}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-    })
-    return nop(keycloak, resp)
+    return RecordApi.deleteRecord(keycloak, id, oid)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)

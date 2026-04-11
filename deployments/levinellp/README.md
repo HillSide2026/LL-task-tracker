@@ -1,14 +1,16 @@
 # Levine LLP Matter Portal Deployment
 
-This folder is a first-pass deployment scaffold for running the customized WKS matter-admin app at:
+This folder is the deployment source of truth for running Levine LLP's matter platform at:
 
 - Portal: `https://matters.levinellp.ca`
 - Object storage API: `https://s3.matters.levinellp.ca`
 - Keycloak: `https://matters.levinellp.ca/auth`
-- Case API: `https://matters.levinellp.ca/engine`
+- Case API: `https://matters.levinellp.ca/api`
 - Storage API: `https://matters.levinellp.ca/storage`
 
-The compose stack uses Camunda 7 because it is the lighter WKS runtime and is the fastest path to a working matter portal. It uses Traefik and Let's Encrypt for HTTPS.
+The compose stack uses Camunda 7 because it is the current Levine workflow runtime and the fastest path to a working matter portal. It uses Traefik and Let's Encrypt for HTTPS.
+
+Some internal service identifiers still retain upstream WKS names for compatibility. Those names are implementation details and should not be treated as the product identity.
 
 ## DNS
 
@@ -70,7 +72,7 @@ docker compose \
   up -d --build
 ```
 
-Bootstrap the initial realm, roles, demo user, case definitions, forms, and matter-admin sample process:
+Bootstrap the initial realm, roles, demo user, case definitions, forms, and matter-admin process:
 
 ```sh
 docker compose \
@@ -101,7 +103,7 @@ Useful health URLs:
 
 ```text
 https://matters.levinellp.ca/auth
-https://matters.levinellp.ca/engine/healthCheck
+https://matters.levinellp.ca/api/healthCheck
 https://s3.matters.levinellp.ca/minio/health/live
 ```
 
@@ -116,3 +118,13 @@ This gets the app onto the domain as a deployable pilot stack. Before using it f
 - confirm MinIO CORS and file upload/download behavior in-browser
 - decide whether MinIO should remain self-hosted or move to managed object storage
 - decide whether MongoDB should remain self-hosted or move to managed MongoDB
+
+## Compatibility Notes
+
+- The compose project name is `levine-matter-platform`.
+- OPA still serves the inherited policy path `/v1/data/wks/authz/allow`.
+- The external-task worker still reads `WKS_CASE_API_URL`, `WKS_CLIENT_ID`, and `WKS_CLIENT_SECRET`.
+- The Keycloak portal client is still `wks-portal`.
+- The legacy `/engine` reverse-proxy path is retained as a temporary alias while the portal standardizes on `/api`.
+
+These identifiers are deferred internals. Keep deployment instructions and user-facing copy aligned to Levine LLP's matter platform.

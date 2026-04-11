@@ -1,0 +1,465 @@
+{
+  "caseDefinition": [
+    {
+      "_id": {
+        "$oid": "66d536e6c0c8884b1e83fe0d"
+      },
+      "id": "matter-admin-opening-control",
+      "deployed": true,
+      "name": "Matter Admin Opening Control",
+      "formKey": "matter-admin-opening-intake",
+      "bpmEngineId": "c7-demo",
+      "stagesLifecycleProcessKey": "matter-admin-opening-control",
+      "stages": [
+        {
+          "id": "0",
+          "index": 0,
+          "name": "Onboarding"
+        },
+        {
+          "id": "1",
+          "index": 1,
+          "name": "Opening"
+        },
+        {
+          "id": "2",
+          "index": 2,
+          "name": "Open"
+        }
+      ],
+      "kanbanConfig": {},
+      "caseHooks": []
+    }
+  ],
+  "form": [
+    {
+      "_id": {
+        "$oid": "66a5371222c70cba3b209fbe"
+      },
+      "key": "matter-admin-opening-intake",
+      "structure": {
+        "components": [
+          {
+            "label": "Matter Name",
+            "key": "matterName",
+            "type": "textfield",
+            "input": true,
+            "tableView": true,
+            "validate": {
+              "required": true
+            }
+          },
+          {
+            "label": "Client Name",
+            "key": "clientName",
+            "type": "textfield",
+            "input": true,
+            "tableView": true,
+            "validate": {
+              "required": true
+            }
+          },
+          {
+            "label": "Responsible Lawyer ID",
+            "key": "responsibleLawyerId",
+            "type": "textfield",
+            "input": true,
+            "tableView": true,
+            "validate": {
+              "required": true
+            }
+          },
+          {
+            "label": "Responsible Lawyer Name",
+            "key": "responsibleLawyerName",
+            "type": "textfield",
+            "input": true,
+            "tableView": true,
+            "validate": {
+              "required": true
+            }
+          },
+          {
+            "label": "Engagement Received",
+            "key": "engagementReceived",
+            "type": "checkbox",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Conflicts Cleared",
+            "key": "conflictsCleared",
+            "type": "checkbox",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Opening Notes",
+            "key": "openingNotes",
+            "type": "textarea",
+            "input": true,
+            "tableView": true
+          }
+        ],
+        "display": "form"
+      },
+      "title": "Matter Admin Opening Intake",
+      "toolTip": "Capture the minimum matter-opening control data."
+    },
+    {
+      "_id": {
+        "$oid": "66a5371222c70cba3b209fbf"
+      },
+      "key": "matter-admin-lawyer-review",
+      "structure": {
+        "components": [
+          {
+            "label": "Decision",
+            "key": "decision",
+            "type": "select",
+            "input": true,
+            "data": {
+              "values": [
+                {
+                  "label": "Approve Open",
+                  "value": "approveOpen"
+                },
+                {
+                  "label": "Return for Fixes",
+                  "value": "returnForFixes"
+                }
+              ]
+            }
+          },
+          {
+            "label": "Review Note",
+            "key": "reviewNote",
+            "type": "textarea",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Requested Fixes",
+            "key": "requestedFixes",
+            "type": "textarea",
+            "input": true,
+            "tableView": true
+          }
+        ],
+        "display": "form"
+      },
+      "title": "Matter Admin Lawyer Review",
+      "toolTip": "Capture lawyer approval or return-for-fix notes."
+    },
+    {
+      "_id": {
+        "$oid": "66a5371222c70cba3b209fc0"
+      },
+      "key": "matter-admin-client-wait",
+      "structure": {
+        "components": [
+          {
+            "label": "Waiting Reason Code",
+            "key": "waitingReasonCode",
+            "type": "textfield",
+            "input": true,
+            "tableView": true,
+            "validate": {
+              "required": true
+            }
+          },
+          {
+            "label": "Waiting Reason Detail",
+            "key": "waitingReasonText",
+            "type": "textarea",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Expected Response Date",
+            "key": "expectedResponseAt",
+            "type": "datetime",
+            "input": true,
+            "tableView": true,
+            "enableDate": true,
+            "enableTime": false,
+            "validate": {
+              "required": true
+            }
+          },
+          {
+            "label": "Resume Note",
+            "key": "resumeNote",
+            "type": "textarea",
+            "input": true,
+            "tableView": true
+          }
+        ],
+        "display": "form"
+      },
+      "title": "Matter Admin Client Wait",
+      "toolTip": "Track client-blocked waiting state with a resume date."
+    },
+    {
+      "_id": {
+        "$oid": "66a5371222c70cba3b209fc1"
+      },
+      "key": "matter-admin-maintenance-update",
+      "structure": {
+        "components": [
+          {
+            "label": "Admin Owner Id",
+            "key": "adminOwnerId",
+            "type": "textfield",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Admin Owner Name",
+            "key": "adminOwnerName",
+            "type": "textfield",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Responsible Lawyer Id",
+            "key": "responsibleLawyerId",
+            "type": "textfield",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Responsible Lawyer Name",
+            "key": "responsibleLawyerName",
+            "type": "textfield",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Next Action Owner Type",
+            "key": "nextActionOwnerType",
+            "type": "textfield",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Next Action Owner Ref",
+            "key": "nextActionOwnerRef",
+            "type": "textfield",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Next Action Summary",
+            "key": "nextActionSummary",
+            "type": "textarea",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Next Action Due Date",
+            "key": "nextActionDueAt",
+            "type": "datetime",
+            "input": true,
+            "tableView": true,
+            "enableDate": true,
+            "enableTime": false
+          },
+          {
+            "label": "External Party Ref",
+            "key": "externalPartyRef",
+            "type": "textfield",
+            "input": true,
+            "tableView": true
+          }
+        ],
+        "display": "form"
+      },
+      "title": "Matter Admin Maintenance Update",
+      "toolTip": "Update ownership, next action, and external references for an open matter."
+    },
+    {
+      "_id": {
+        "$oid": "66a5371222c70cba3b209fc2"
+      },
+      "key": "matter-admin-external-wait",
+      "structure": {
+        "components": [
+          {
+            "label": "External Party Ref",
+            "key": "externalPartyRef",
+            "type": "textfield",
+            "input": true,
+            "tableView": true,
+            "validate": {
+              "required": true
+            }
+          },
+          {
+            "label": "Waiting Reason Code",
+            "key": "waitingReasonCode",
+            "type": "textfield",
+            "input": true,
+            "tableView": true,
+            "validate": {
+              "required": true
+            }
+          },
+          {
+            "label": "Waiting Reason Detail",
+            "key": "waitingReasonText",
+            "type": "textarea",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Expected Response Date",
+            "key": "expectedResponseAt",
+            "type": "datetime",
+            "input": true,
+            "tableView": true,
+            "enableDate": true,
+            "enableTime": false,
+            "validate": {
+              "required": true
+            }
+          }
+        ],
+        "display": "form"
+      },
+      "title": "Matter Admin External Wait",
+      "toolTip": "Track waiting on external parties for active matters."
+    },
+    {
+      "_id": {
+        "$oid": "66a5371222c70cba3b209fc3"
+      },
+      "key": "matter-admin-maintenance-lawyer-followup",
+      "structure": {
+        "components": [
+          {
+            "label": "Decision",
+            "key": "decision",
+            "type": "select",
+            "input": true,
+            "data": {
+              "values": [
+                {
+                  "label": "Return to Active",
+                  "value": "returnToActive"
+                },
+                {
+                  "label": "Request Client Follow-up",
+                  "value": "requestClientFollowup"
+                },
+                {
+                  "label": "Request External Follow-up",
+                  "value": "requestExternalFollowup"
+                }
+              ]
+            }
+          },
+          {
+            "label": "Lawyer Follow-up Note",
+            "key": "followupNote",
+            "type": "textarea",
+            "input": true,
+            "tableView": true
+          },
+          {
+            "label": "Requested Admin Action",
+            "key": "requestedAdminAction",
+            "type": "textarea",
+            "input": true,
+            "tableView": true
+          }
+        ],
+        "display": "form"
+      },
+      "title": "Matter Admin Maintenance Lawyer Follow-up",
+      "toolTip": "Capture lawyer review outcomes for active matters."
+    }
+  ],
+  "queue": [
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971ac1"
+      },
+      "id": "matter-admin-intake",
+      "name": "Matter Admin Intake",
+      "description": "Matter Admin Intake"
+    },
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971ac2"
+      },
+      "id": "matter-admin-engagement-hold",
+      "name": "Matter Admin Engagement Hold",
+      "description": "Matter Admin Engagement Hold"
+    },
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971ac3"
+      },
+      "id": "matter-admin-ready-to-open",
+      "name": "Matter Admin Ready to Open",
+      "description": "Matter Admin Ready to Open"
+    },
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971ac4"
+      },
+      "id": "matter-admin-lawyer-review",
+      "name": "Matter Admin Lawyer Review",
+      "description": "Matter Admin Lawyer Review"
+    },
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971ac5"
+      },
+      "id": "matter-admin-client-waiting",
+      "name": "Matter Admin Client Waiting",
+      "description": "Matter Admin Client Waiting"
+    },
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971ac6"
+      },
+      "id": "matter-admin-open",
+      "name": "Matter Admin Opened",
+      "description": "Matter Admin Opened"
+    },
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971ac7"
+      },
+      "id": "matter-admin-active",
+      "name": "Matter Admin Active",
+      "description": "Matter Admin Active"
+    },
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971ac9"
+      },
+      "id": "matter-admin-maintenance-lawyer-review",
+      "name": "Matter Admin Maintenance Lawyer Review",
+      "description": "Matter Admin Maintenance Lawyer Review"
+    },
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971aca"
+      },
+      "id": "matter-admin-maintenance-client-waiting",
+      "name": "Matter Admin Maintenance Client Waiting",
+      "description": "Matter Admin Maintenance Client Waiting"
+    },
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971acb"
+      },
+      "id": "matter-admin-external-waiting",
+      "name": "Matter Admin External Waiting",
+      "description": "Matter Admin External Waiting"
+    }
+  ]
+}

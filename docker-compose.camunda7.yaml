@@ -1,5 +1,7 @@
 version: '3.7'
-name: wks-platform
+# LL Task Tracker local developer stack for the Camunda 7 runtime.
+# Some upstream WKS environment variable names are retained for compatibility.
+name: ll-task-tracker-dev
 services:
 
     camunda:

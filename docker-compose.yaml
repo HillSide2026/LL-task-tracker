@@ -1,5 +1,7 @@
 version: '3.7'
-name: wks-platform
+# LL Task Tracker local developer stack.
+# Some upstream WKS service and policy identifiers are retained for compatibility.
+name: ll-task-tracker-dev
 services:
     minio:
         image: quay.io/minio/minio

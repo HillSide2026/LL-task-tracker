@@ -1,7 +1,6 @@
-import Config from '../consts'
+import { MatterApi } from '../api'
 import i18n from '../i18n'
 import { getAdminStateLabel } from '../common/adminLifecycle'
-import { json, nop } from './request'
 
 export const CaseService = {
   getAllByStatus,
@@ -23,15 +22,8 @@ async function getAllByStatus(keycloak, status, limit) {
     return Promise.resolve([])
   }
 
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
-  var url = `${Config.CaseEngineUrl}/case?status=${status}&limit=${limit}`
-
   try {
-    const resp = await fetch(url, { headers })
-    const data = await json(keycloak, resp)
+    const data = await MatterApi.getMatters(keycloak, { status, limit })
     return mapperToCase(data)
   } catch (e) {
     console.log(e)
@@ -40,15 +32,8 @@ async function getAllByStatus(keycloak, status, limit) {
 }
 
 async function getCaseDefinitions(keycloak) {
-  const url = `${Config.CaseEngineUrl}/case-definition?deployed=true`
-
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
   try {
-    const resp = await fetch(url, { headers })
-    return json(keycloak, resp)
+    return MatterApi.getMatterDefinitions(keycloak, { deployed: true })
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -56,15 +41,8 @@ async function getCaseDefinitions(keycloak) {
 }
 
 async function getCaseDefinitionsById(keycloak, caseDefId) {
-  const url = `${Config.CaseEngineUrl}/case-definition/${caseDefId || ''}`
-
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
   try {
-    const resp = await fetch(url, { headers })
-    return json(keycloak, resp)
+    return MatterApi.getMatterDefinition(keycloak, caseDefId || '')
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -72,15 +50,8 @@ async function getCaseDefinitionsById(keycloak, caseDefId) {
 }
 
 async function getCaseById(keycloak, id) {
-  let url = `${Config.CaseEngineUrl}/case/${id}`
-
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
   try {
-    const resp = await fetch(url, { headers })
-    const data = await json(keycloak, resp)
+    const data = await MatterApi.getMatter(keycloak, id)
     return mapCaseItem(data)
   } catch (e) {
     console.log(e)
@@ -89,59 +60,25 @@ async function getCaseById(keycloak, id) {
 }
 
 async function filterCase(keycloak, caseDefId, status, cursor, filters = {}) {
-  let url = `${Config.CaseEngineUrl}/case?`
-  url = url + (status ? `status=${status}` : '')
-  url = url + (caseDefId ? `&caseDefinitionId=${caseDefId}` : '')
-  url =
-    url +
-    (filters.adminState
-      ? `&adminState=${encodeURIComponent(filters.adminState)}`
-      : '')
-  url =
-    url +
-    (filters.adminHealth
-      ? `&adminHealth=${encodeURIComponent(filters.adminHealth)}`
-      : '')
-  url =
-    url +
-    (filters.nextActionOwnerType
-      ? `&nextActionOwnerType=${encodeURIComponent(filters.nextActionOwnerType)}`
-      : '')
-  url =
-    url +
-    (filters.queueId ? `&queueId=${encodeURIComponent(filters.queueId)}` : '')
-  url =
-    url +
-    (filters.malformedCase !== undefined
-      ? `&malformedCase=${filters.malformedCase}`
-      : '')
-  url =
-    url +
-    (filters.exceptionOnly !== undefined
-      ? `&exceptionOnly=${filters.exceptionOnly}`
-      : '')
-  url =
-    url +
-    (filters.adminOwnerId
-      ? `&adminOwnerId=${encodeURIComponent(filters.adminOwnerId)}`
-      : '')
-  url =
-    url +
-    (filters.healthReasonCode
-      ? `&healthReasonCode=${encodeURIComponent(filters.healthReasonCode)}`
-      : '')
-  url = url + `&before=${cursor.before || ''}`
-  url = url + `&after=${cursor.after || ''}`
-  url = url + `&sort=${cursor.sort || 'desc'}`
-  url = url + `&limit=${cursor.limit || 10}`
-
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
+  const params = {
+    status,
+    caseDefinitionId: caseDefId,
+    adminState: filters.adminState,
+    adminHealth: filters.adminHealth,
+    nextActionOwnerType: filters.nextActionOwnerType,
+    queueId: filters.queueId,
+    malformedCase: filters.malformedCase,
+    exceptionOnly: filters.exceptionOnly,
+    adminOwnerId: filters.adminOwnerId,
+    healthReasonCode: filters.healthReasonCode,
+    before: cursor.before,
+    after: cursor.after,
+    sort: cursor.sort || 'desc',
+    limit: cursor.limit || 10,
   }
 
   try {
-    const resp = await fetch(url, { headers })
-    const data = await json(keycloak, resp)
+    const data = await MatterApi.getMatters(keycloak, params)
     return mapperToCase(data)
   } catch (e) {
     console.log(e)
@@ -150,19 +87,8 @@ async function filterCase(keycloak, caseDefId, status, cursor, filters = {}) {
 }
 
 async function patch(keycloak, id, body) {
-  const url = `${Config.CaseEngineUrl}/case/${id}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'PATCH',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/merge-patch+json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: body,
-    })
-    return nop(keycloak, resp)
+    return MatterApi.patchMatter(keycloak, id, body)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -170,23 +96,13 @@ async function patch(keycloak, id, body) {
 }
 
 async function transition(keycloak, businessKey, transitionName, body = {}) {
-  const url = `${Config.CaseEngineUrl}/case/${businessKey}/transition/${transitionName}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(body),
-    })
-    if (!resp.ok) {
-      const errorText = await resp.text()
-      return await Promise.reject(new Error(errorText || 'Transition failed'))
-    }
-    return json(keycloak, resp)
+    return MatterApi.transitionMatter(
+      keycloak,
+      businessKey,
+      transitionName,
+      body,
+    )
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -194,19 +110,8 @@ async function transition(keycloak, businessKey, transitionName, body = {}) {
 }
 
 async function createCase(keycloak, body) {
-  const url = `${Config.CaseEngineUrl}/case`
-
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: body,
-    })
-    const data = await json(keycloak, resp)
+    const data = await MatterApi.createMatter(keycloak, body)
     return mapCaseItem(data)
   } catch (err) {
     console.log(err)
@@ -215,19 +120,8 @@ async function createCase(keycloak, body) {
 }
 
 async function addDocuments(keycloak, businessKey, document) {
-  const url = `${Config.CaseEngineUrl}/case/${businessKey}/document`
-
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(document),
-    })
-    return nop(keycloak, resp)
+    return MatterApi.addMatterDocument(keycloak, businessKey, document)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -235,8 +129,6 @@ async function addDocuments(keycloak, businessKey, document) {
 }
 
 async function addComment(keycloak, text, parentId, businessKey) {
-  const url = `${Config.CaseEngineUrl}/case/${businessKey}/comment`
-
   const comment = {
     body: text,
     parentId,
@@ -246,16 +138,7 @@ async function addComment(keycloak, text, parentId, businessKey) {
   }
 
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(comment),
-    })
-    return nop(keycloak, resp)
+    return MatterApi.addMatterComment(keycloak, businessKey, comment)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -263,8 +146,6 @@ async function addComment(keycloak, text, parentId, businessKey) {
 }
 
 async function updateComment(keycloak, text, commentId, businessKey) {
-  const url = `${Config.CaseEngineUrl}/case/${businessKey}/comment/${commentId}`
-
   const comment = {
     id: commentId,
     body: text,
@@ -273,16 +154,12 @@ async function updateComment(keycloak, text, commentId, businessKey) {
   }
 
   try {
-    const resp = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(comment),
-    })
-    return nop(keycloak, resp)
+    return MatterApi.updateMatterComment(
+      keycloak,
+      businessKey,
+      commentId,
+      comment,
+    )
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)
@@ -290,18 +167,8 @@ async function updateComment(keycloak, text, commentId, businessKey) {
 }
 
 async function deleteComment(keycloak, commentId, businessKey) {
-  const url = `${Config.CaseEngineUrl}/case/${businessKey}/comment/${commentId}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-    })
-    return nop(keycloak, resp)
+    return MatterApi.deleteMatterComment(keycloak, businessKey, commentId)
   } catch (e) {
     console.log(e)
     return await Promise.reject(e)

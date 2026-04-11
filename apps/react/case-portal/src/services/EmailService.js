@@ -1,5 +1,4 @@
-import { json } from './request'
-import Config from '../consts'
+import { EmailApi } from '../api'
 
 export const EmailService = {
   send,
@@ -7,18 +6,8 @@ export const EmailService = {
 }
 
 async function send(keycloak, body) {
-  const url = `${Config.CaseEngineUrl}/case-email`
-
   try {
-    await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(body),
-    })
+    return EmailApi.sendCaseEmail(keycloak, body)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -26,15 +15,8 @@ async function send(keycloak, body) {
 }
 
 async function getAllByBusinessKey(keycloak, caseInstanceBusinessKey) {
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
-  var url = `${Config.CaseEngineUrl}/case-email?caseInstanceBusinessKey=${caseInstanceBusinessKey}`
-
   try {
-    const resp = await fetch(url, { headers })
-    return json(keycloak, resp)
+    return EmailApi.findCaseEmails(keycloak, { caseInstanceBusinessKey })
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)

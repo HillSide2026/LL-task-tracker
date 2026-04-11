@@ -1,5 +1,4 @@
-import { json, nop } from './request'
-import Config from '../consts'
+import { CaseDefinitionApi } from '../api'
 
 export const CaseDefService = {
   create,
@@ -9,19 +8,8 @@ export const CaseDefService = {
 }
 
 async function create(keycloak, body) {
-  const url = `${Config.CaseEngineUrl}/case-definition`
-
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(body),
-    })
-    return nop(keycloak, resp)
+    return CaseDefinitionApi.createCaseDefinition(keycloak, body)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -29,19 +17,8 @@ async function create(keycloak, body) {
 }
 
 async function update(keycloak, id, body) {
-  const url = `${Config.CaseEngineUrl}/case-definition/${id}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(body),
-    })
-    return nop(keycloak, resp)
+    return CaseDefinitionApi.updateCaseDefinition(keycloak, id, body)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -49,18 +26,8 @@ async function update(keycloak, id, body) {
 }
 
 async function remove(keycloak, id) {
-  const url = `${Config.CaseEngineUrl}/case-definition/${id}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-    })
-    return nop(keycloak, resp)
+    return CaseDefinitionApi.deleteCaseDefinition(keycloak, id)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -68,19 +35,8 @@ async function remove(keycloak, id) {
 }
 
 async function getAll(keycloak) {
-  if (keycloak.isTokenExpired()) {
-    keycloak.logout({ redirectUri: window.location.origin })
-  }
-
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
-  var url = `${Config.CaseEngineUrl}/case-definition`
-
   try {
-    const resp = await fetch(url, { headers })
-    return json(keycloak, resp)
+    return CaseDefinitionApi.findCaseDefinitions(keycloak)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)

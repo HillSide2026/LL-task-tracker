@@ -1,4 +1,4 @@
-name: wks-matters
+name: levine-matter-platform
 
 services:
   traefik:
@@ -72,6 +72,7 @@ services:
     command:
       - run
       - --server
+      # Retained until the OPA package/path is renamed away from upstream WKS identifiers.
       - /etc/rules/wks_policy_rules.rego
     volumes:
       - ../../opa:/etc/rules:ro
@@ -111,6 +112,7 @@ services:
       context: ../../apps/java/services/storage-api
     restart: unless-stopped
     environment:
+      # Retained until the OPA package/path is renamed away from upstream WKS identifiers.
       OPA_URL: http://opa:8181/v1/data/wks/authz/allow
       KEYCLOAK_URL: http://keycloak:8080/auth
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
@@ -161,6 +163,7 @@ services:
       MONGO_DATABASE: ${TENANT_REALM}
       MONGO_CONN: mongodb://mongodb
       KEYCLOAK_URL: http://keycloak:8080/auth
+      # Retained until the OPA package/path is renamed away from upstream WKS identifiers.
       OPA_URL: http://opa:8181/v1/data/wks/authz/allow
     depends_on:
       mongodb:
@@ -173,13 +176,13 @@ services:
         condition: service_started
     labels:
       - traefik.enable=true
-      - traefik.http.routers.case-engine-rest-api.rule=Host(`${APP_HOST}`) && PathPrefix(`/engine`)
+      - traefik.http.routers.case-engine-rest-api.rule=Host(`${APP_HOST}`) && (PathPrefix(`/api`) || PathPrefix(`/engine`))
       - traefik.http.routers.case-engine-rest-api.entrypoints=websecure
       - traefik.http.routers.case-engine-rest-api.tls.certresolver=letsencrypt
       - traefik.http.routers.case-engine-rest-api.priority=100
-      - traefik.http.routers.case-engine-rest-api.middlewares=strip-engine
+      - traefik.http.routers.case-engine-rest-api.middlewares=strip-case-api
       - traefik.http.routers.case-engine-rest-api.service=case-engine-rest-api
-      - traefik.http.middlewares.strip-engine.stripprefix.prefixes=/engine
+      - traefik.http.middlewares.strip-case-api.stripprefix.prefixes=/api,/engine
       - traefik.http.services.case-engine-rest-api.loadbalancer.server.port=8081
 
   c7-external-tasks:
@@ -191,6 +194,7 @@ services:
       CAMUNDA_USERNAME: ${CAMUNDA_USERNAME}
       CAMUNDA_PASSWORD: ${CAMUNDA_PASSWORD}
       KEYCLOAK_URL: http://keycloak:8080/auth/realms/${TENANT_REALM}/protocol/openid-connect/token
+      # The external-task worker still reads these upstream-compatible WKS_* names.
       WKS_CASE_API_URL: http://case-engine-rest-api:8081
       WKS_CLIENT_ID: wks-external-tasks
       WKS_CLIENT_SECRET: ${KEYCLOAK_EXTERNALTASKS_SECRET}
@@ -209,8 +213,8 @@ services:
         GENERATE_SOURCEMAP: "false"
     restart: unless-stopped
     environment:
-      __SERVER_KEYCLOAK_URL__: https://${APP_HOST}/auth
-      __SERVER_API_URL__: https://${APP_HOST}/engine
+      __SERVER_KEYCLOAK_URL__: /auth
+      __SERVER_API_URL__: /api
       __SERVER_STORAGE_URL__: https://${APP_HOST}
       __SERVER_WEBSOCKETS_ENABLED__: "false"
       __SERVER_WEBSOCKETS_URL__: ""

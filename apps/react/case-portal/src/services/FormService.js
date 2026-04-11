@@ -1,5 +1,4 @@
-import { json, nop } from './request'
-import Config from '../consts'
+import { FormApi, getApiBaseUrl } from '../api'
 
 export const FormService = {
   getAll,
@@ -11,19 +10,8 @@ export const FormService = {
 }
 
 async function create(keycloak, body) {
-  const url = `${Config.CaseEngineUrl}/form`
-
   try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(body),
-    })
-    return nop(keycloak, resp)
+    return FormApi.createForm(keycloak, body)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -31,19 +19,8 @@ async function create(keycloak, body) {
 }
 
 async function update(keycloak, id, body) {
-  const url = `${Config.CaseEngineUrl}/form/${id}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'PATCH',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-      body: JSON.stringify(body),
-    })
-    return nop(keycloak, resp)
+    return FormApi.updateForm(keycloak, id, body)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -51,18 +28,8 @@ async function update(keycloak, id, body) {
 }
 
 async function remove(keycloak, id) {
-  const url = `${Config.CaseEngineUrl}/form/${id}`
-
   try {
-    const resp = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-    })
-    return nop(keycloak, resp)
+    return FormApi.deleteForm(keycloak, id)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -70,15 +37,8 @@ async function remove(keycloak, id) {
 }
 
 async function getAll(keycloak) {
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
-  var url = `${Config.CaseEngineUrl}/form`
-
   try {
-    const resp = await fetch(url, { headers })
-    return json(keycloak, resp)
+    return FormApi.findForms(keycloak)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -86,17 +46,8 @@ async function getAll(keycloak) {
 }
 
 async function getByKey(keycloak, formKey) {
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
-  var url = `${Config.CaseEngineUrl}/form/${formKey}`
-
   try {
-    const resp = await fetch(url, { headers })
-
-    const requested = await json(keycloak, resp)
-
+    const requested = await FormApi.getForm(keycloak, formKey)
     const data = requestRemoteDataSourceAndFillRecordTypesIfRequired(
       requested,
       keycloak,
@@ -110,17 +61,8 @@ async function getByKey(keycloak, formKey) {
 }
 
 async function getVariableById(keycloak, processInstanceId) {
-  const headers = {
-    Authorization: `Bearer ${keycloak.token}`,
-  }
-
-  const body = JSON.stringify({ processInstanceId })
-
-  var url = `${Config.CaseEngineUrl}/variable`
-
   try {
-    const resp = await fetch(url, { headers, body })
-    return json(keycloak, resp)
+    return FormApi.findVariables(keycloak, processInstanceId)
   } catch (err) {
     console.log(err)
     return await Promise.reject(err)
@@ -132,6 +74,8 @@ function requestRemoteDataSourceAndFillRecordTypesIfRequired(
   keycloak,
 ) {
   function processComponentWithContext(components) {
+    const apiBaseUrl = getApiBaseUrl()
+
     return components?.map((item) => {
       if (item.type === 'recordtype') {
         const options = item.customOptions
@@ -148,7 +92,7 @@ function requestRemoteDataSourceAndFillRecordTypesIfRequired(
           template: `<span>${template}</span>`,
           valueProperty: valueProperty,
           data: {
-            url: `${Config.CaseEngineUrl}/record/${recordId}`,
+            url: `${apiBaseUrl}/record/${recordId}`,
             headers: [
               {
                 key: 'Authorization',

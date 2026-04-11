@@ -1,0 +1,18 @@
+---
+id: deferred-internals
+title: Deferred Internals
+sidebar_position: 4
+---
+
+# Deferred Internals
+
+Some inherited internal identifiers remain in place for compatibility. Treat these as implementation details, not Levine LLP product identity.
+
+## Deferred Identifiers
+
+- OPA policy path: `/v1/data/wks/authz/allow`
+- OPA policy file: `wks_policy_rules.rego`
+- External-task variables: `WKS_CASE_API_URL`, `WKS_CLIENT_ID`, `WKS_CLIENT_SECRET`
+- Keycloak portal client: `wks-portal`
+
+Do not rename these identifiers during branding cleanup. Rename them only as part of a focused internal migration that updates the consuming services, seed loader, tests, and deployment manifests together.

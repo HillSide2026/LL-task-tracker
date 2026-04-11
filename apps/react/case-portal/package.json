@@ -1,8 +1,8 @@
 {
-  "name": "case-portal",
+  "name": "levine-matter-portal",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://www.wkspower.com",
+  "homepage": "https://matters.levinellp.ca",
   "license": "MIT",
   "dependencies": {
     "@ant-design/icons": "^5.3.6",

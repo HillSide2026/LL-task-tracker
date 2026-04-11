@@ -1,4 +1,4 @@
-import Config from 'consts/index'
+import { getApiBaseUrl } from 'api'
 import { Formio } from 'formiojs'
 import MemoryTokenManager from 'plugins/MemoryTokenManager'
 
@@ -60,7 +60,7 @@ class RecordTypeChoice extends Formio.Components.components.field {
               dataSrc: 'url',
               template: `<span>{{item.id}}</span>`,
               data: {
-                url: `${Config.CaseEngineUrl}/record-type`,
+                url: `${getApiBaseUrl()}/record-type`,
                 headers: [
                   {
                     key: 'Authorization',

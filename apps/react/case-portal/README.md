@@ -1,48 +1,28 @@
-# case-portal-admin-react
+# Levine LLP Matter Portal
 
-Describe global configs about this project.
+React application for Levine LLP's internal matter portal.
 
-## Configure i18n
+The app still uses the inherited case/task/record management shell, but visible branding and matter-specific routes are Levine LLP focused.
 
-Add new entry on <b>i18n/pt_br.js</b> and <b>i18n/en_us.js</b>
+## Local Development
 
-## Using i18n
-
-```js
-...
-import { useTranslation } from 'react-i18next';
-
-const ExamplePage = () => {
-    const { t } = useTranslation();
-
-    return <div>{t('pages.dashboard.title')}</div>;
-};
-...
+```sh
+npm install
+npm run start
 ```
 
-## Customize menu items with external links
+## Configuration
 
-```bash
-#edit
+Runtime URLs are injected through the `REACT_APP_*` variables for local development and `__SERVER_*__` placeholders for the containerized deployment.
 
-$ code src/consts/customMenuItems.js
-```
+The Keycloak client ID remains `wks-portal` for compatibility until the auth client cleanup phase.
 
-```js
-...
-  const menuItems = [
-    {
-        title: 'site 1',
-        url: 'https://www.demo1.com',
-    },
-    {
-        title: 'site 2',
-        url: 'https://www.demo2.com',
-    }
-];
-...
-```
+## Matter Operations
 
-## References
+Matter-specific UI is concentrated in:
 
-[React internationalization (i18n)](https://www.i18next.com)
+- `src/common/adminLifecycle.js`
+- `src/routes/MainRoutes.js`
+- `src/views/dashboard`
+- `src/views/caseList/caseList.js`
+- `src/views/caseForm/caseForm.js`

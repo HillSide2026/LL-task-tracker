@@ -3,9 +3,9 @@ import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
-  title: "WKS Platform",
-  tagline: "Adaptive Case Management Platform",
-  url: "https://www.wkspower.com",
+  title: "Levine LLP Matter Platform",
+  tagline: "Internal matter operations documentation",
+  url: "https://matters.levinellp.ca",
   baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -13,8 +13,8 @@ const config: Config = {
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: "wks-power", // Usually your GitHub org/user name.
-  projectName: "wks-platform-docs", // Usually your repo name.
+  organizationName: "HillSide2026", // Usually your GitHub org/user name.
+  projectName: "LL-task-tracker", // Usually your repo name.
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -29,9 +29,11 @@ const config: Config = {
       "classic",
       {
         docs: {
-          sidebarPath: require.resolve("./sidebars.js"),
+          path: "docs-live",
+          routeBasePath: "docs",
+          sidebarPath: require.resolve("./sidebars.ts"),
           breadcrumbs: false,
-          editUrl: "https://github.com/wkspower/wks-platform/tree/develop/apps/react/docs/",
+          editUrl: "https://github.com/HillSide2026/LL-task-tracker/tree/main/apps/react/docs/",
         },
         theme: {
           customCss: "./src/css/custom.css",
@@ -48,39 +50,34 @@ const config: Config = {
     navbar: {
       title: "",
       logo: {
-        alt: "WKS Platform Logo",
+        alt: "Levine LLP Matter Platform Logo",
         src: "img/logo.svg",
       },
       items: [
         {
-          href: "https://www.wkspower.com/blog",
-          label: "Blog",
+          href: "https://levinellp.ca",
+          label: "Levine LLP",
           position: "left",
         },
         {
           type: "doc",
-          docId: "Introduction/intro",
+          docId: "intro",
           position: "left",
           label: "Docs",
         },
         {
           type: "doc",
-          docId: "Introduction/intro-video",
+          docId: "deployment",
           position: "left",
-          label: "Intro Video",
+          label: "Deployment",
         },
         {
-          href: "https://www.wkspower.com",
-          label: "WKS Power Website",
+          href: "https://matters.levinellp.ca",
+          label: "Matter Portal",
           position: "right",
         },
         {
-          href: "https://wkspower.com/contact-us-wks-platform",
-          label: "Contact Us",
-          position: "right",
-        },
-        {
-          href: "https://github.com/wkspower/wks-platform",
+          href: "https://github.com/HillSide2026/LL-task-tracker",
           label: "GitHub",
           position: "right",
         },
@@ -129,7 +126,7 @@ const config: Config = {
         //   ],
         // },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} WKS Power.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Levine LLP.`,
     },
     prism: {
       theme: prismThemes.github,

@@ -47,7 +47,7 @@ const DashboardDefault = () => {
       <Grid item xs={12} sm={6} md={4} lg={3}>
         <DashboardCard
           title='Look and Feel'
-          subtitle={'Customize the Platform Appearance'}
+          subtitle={'Customize the matter portal appearance'}
           icon={<IconPalette />}
           to='/system/look-and-feel'
         />

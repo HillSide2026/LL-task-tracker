@@ -1,27 +1,15 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import BpmnJS from 'bpmn-js/dist/bpmn-navigated-viewer.production.min.js'
 import './BpmnIo.css'
 import { useSession } from 'SessionStoreContext'
+import { ProcessDefService } from 'services/ProcessDefService'
 
-export const ReactBpmn = ({ url, activities }) => {
-  const [containerRef, setContainerRef] = useState(React.createRef)
+export const ReactBpmn = ({ processDefinitionId, activities }) => {
+  const containerRef = useRef(null)
   const keycloak = useSession()
-
-  useEffect(() => {
-    fetch(url, {
-      headers: {
-        Authorization: `Bearer ${keycloak.token}`,
-      },
-    })
-      .then((response) => response.text())
-      .then((text) => {
-        memoizedCallback(text)
-      })
-  }, [activities])
 
   const memoizedCallback = useCallback(
     (text) => {
-      setContainerRef(React.createRef)
       const container = containerRef.current
       const bpmnViewer = new BpmnJS({ container })
       bpmnViewer.importXML(text).then(() => {
@@ -35,6 +23,14 @@ export const ReactBpmn = ({ url, activities }) => {
 
     [activities],
   )
+
+  useEffect(() => {
+    ProcessDefService.getBPMNXml(keycloak, processDefinitionId)
+      .then((text) => {
+        memoizedCallback(text)
+      })
+      .catch((err) => console.log(err))
+  }, [keycloak, memoizedCallback, processDefinitionId])
 
   const Div = useCallback(
     ({ containerRef }) => {
