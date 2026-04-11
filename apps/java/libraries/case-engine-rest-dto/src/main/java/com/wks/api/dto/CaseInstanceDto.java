@@ -1,0 +1,101 @@
+/*
+ * WKS Platform - Open-Source Project
+ * 
+ * This file is part of the WKS Platform, an open-source project developed by WKS Power.
+ * 
+ * WKS Platform is licensed under the MIT License.
+ * 
+ * © 2021 WKS Power. All rights reserved.
+ * 
+ * For licensing information, see the LICENSE file in the root directory of the project.
+ */
+package com.wks.api.dto;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Builder.Default;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+/**
+ * @author victor.franca
+ *
+ */
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class CaseInstanceDto {
+
+	private String businessKey;
+
+	private String caseDefinitionId;
+
+	private String stage;
+
+	private CaseOwnerDto owner;
+
+	@Default
+	private List<CaseCommentDto> comments = new ArrayList<>();
+
+	private List<CaseDocumentDto> documents;
+
+	private List<CaseAttributeDto> attributes;
+
+	private String status;
+
+	private String queueId;
+
+	private String adminState;
+
+	private String adminHealth;
+
+	@Default
+	private List<String> healthReasonCodes = new ArrayList<>();
+
+	private String healthEvaluatedAt;
+
+	private String staleSince;
+
+	private Boolean malformedCase;
+
+	private String adminOwnerId;
+
+	private String adminOwnerName;
+
+	private String responsibleLawyerId;
+
+	private String responsibleLawyerName;
+
+	private String nextActionOwnerType;
+
+	private String nextActionOwnerRef;
+
+	private String nextActionSummary;
+
+	private String nextActionDueAt;
+
+	private String waitingReasonCode;
+
+	private String waitingReasonText;
+
+	private String waitingSince;
+
+	private String expectedResponseAt;
+
+	private String externalPartyRef;
+
+	private String resumeToState;
+
+	private String lastStateChangedAt;
+
+	private String openedAt;
+
+	@Default
+	private List<AdminEventDto> adminEvents = new ArrayList<>();
+}

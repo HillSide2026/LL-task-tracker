@@ -1,0 +1,276 @@
+name: wks-matters
+
+services:
+  traefik:
+    image: traefik:v2.11
+    restart: unless-stopped
+    command:
+      - --log.level=INFO
+      - --api.dashboard=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    networks:
+      default:
+        aliases:
+          - ${APP_HOST}
+          - ${S3_HOST}
+
+  mongodb:
+    image: mongo:6.0.14
+    restart: unless-stopped
+    healthcheck:
+      test: mongosh --eval 'db.stats().ok' --quiet
+      interval: 10s
+      retries: 3
+      start_period: 5s
+      timeout: 10s
+    volumes:
+      - mongo:/data/db:rw
+
+  minio:
+    image: quay.io/minio/minio
+    restart: unless-stopped
+    command: server /data --console-address ":9090"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_SERVER_URL: https://${S3_HOST}
+      MINIO_BROWSER: "off"
+      MINIO_API_CORS_ALLOW_ORIGIN: https://${APP_HOST}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    volumes:
+      - minio:/data:rw
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.minio-api.rule=Host(`${S3_HOST}`)
+      - traefik.http.routers.minio-api.entrypoints=websecure
+      - traefik.http.routers.minio-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.minio-api.service=minio-api
+      - traefik.http.services.minio-api.loadbalancer.server.port=9000
+
+  opa:
+    image: openpolicyagent/opa:0.49.2-static
+    restart: unless-stopped
+    command:
+      - run
+      - --server
+      - /etc/rules/wks_policy_rules.rego
+    volumes:
+      - ../../opa:/etc/rules:ro
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:20.0.3
+    restart: unless-stopped
+    command:
+      - start-dev
+      - --http-relative-path=/auth
+      - --proxy=edge
+      - --hostname-url=https://${APP_HOST}/auth
+      - --hostname-admin-url=https://${APP_HOST}/auth
+    environment:
+      KC_HEALTH_ENABLED: "true"
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    healthcheck:
+      test: curl --fail http://localhost:8080/auth/health/ready || exit 1
+      interval: 10s
+      retries: 10
+      start_period: 20s
+      timeout: 20s
+    volumes:
+      - keycloak:/opt/keycloak/data/
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.keycloak.rule=Host(`${APP_HOST}`) && PathPrefix(`/auth`)
+      - traefik.http.routers.keycloak.entrypoints=websecure
+      - traefik.http.routers.keycloak.tls.certresolver=letsencrypt
+      - traefik.http.routers.keycloak.priority=100
+      - traefik.http.routers.keycloak.service=keycloak
+      - traefik.http.services.keycloak.loadbalancer.server.port=8080
+
+  storage-api:
+    build:
+      context: ../../apps/java/services/storage-api
+    restart: unless-stopped
+    environment:
+      OPA_URL: http://opa:8181/v1/data/wks/authz/allow
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      DRIVER_STORAGE_ENDPOINT_URL: ${S3_HOST}
+      DRIVER_STORAGE_ENDPOINT_PORT: 443
+      DRIVER_STORAGE_ENDPOINT_SECURE: "true"
+      DRIVER_STORAGE_UPLOADS_BACKEND_URL: ${S3_HOST}
+      DRIVER_STORAGE_UPLOADS_BACKEND_PROTOCOL: https
+      DRIVER_STORAGE_UPLOADS_BACKEND_PORT: -1
+    depends_on:
+      minio:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      opa:
+        condition: service_started
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.storage-api.rule=Host(`${APP_HOST}`) && PathPrefix(`/storage`)
+      - traefik.http.routers.storage-api.entrypoints=websecure
+      - traefik.http.routers.storage-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.storage-api.priority=100
+      - traefik.http.routers.storage-api.service=storage-api
+      - traefik.http.services.storage-api.loadbalancer.server.port=8085
+
+  camunda:
+    image: ${CAMUNDA_DOCKER_IMAGE}:${CAMUNDA7_VERSION}
+    restart: unless-stopped
+    command: ./camunda.sh --rest --webapps
+    healthcheck:
+      test: curl --fail http://localhost:8080/engine-rest/version || exit 1
+      interval: 10s
+      retries: 3
+      start_period: 5s
+      timeout: 10s
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  case-engine-rest-api:
+    build:
+      context: ../../apps/java/services/case-engine-rest-api
+    restart: unless-stopped
+    environment:
+      CAMUNDA_VERSION: camunda7
+      CAMUNDA_BASE_URL: http://camunda:8080/engine-rest
+      MONGO_DATABASE: ${TENANT_REALM}
+      MONGO_CONN: mongodb://mongodb
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      OPA_URL: http://opa:8181/v1/data/wks/authz/allow
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      camunda:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      opa:
+        condition: service_started
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.case-engine-rest-api.rule=Host(`${APP_HOST}`) && PathPrefix(`/engine`)
+      - traefik.http.routers.case-engine-rest-api.entrypoints=websecure
+      - traefik.http.routers.case-engine-rest-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.case-engine-rest-api.priority=100
+      - traefik.http.routers.case-engine-rest-api.middlewares=strip-engine
+      - traefik.http.routers.case-engine-rest-api.service=case-engine-rest-api
+      - traefik.http.middlewares.strip-engine.stripprefix.prefixes=/engine
+      - traefik.http.services.case-engine-rest-api.loadbalancer.server.port=8081
+
+  c7-external-tasks:
+    build:
+      context: ../../apps/java/services/c7-external-tasks
+    restart: unless-stopped
+    environment:
+      CAMUNDA_BASE_URL: http://camunda:8080/engine-rest
+      CAMUNDA_USERNAME: ${CAMUNDA_USERNAME}
+      CAMUNDA_PASSWORD: ${CAMUNDA_PASSWORD}
+      KEYCLOAK_URL: http://keycloak:8080/auth/realms/${TENANT_REALM}/protocol/openid-connect/token
+      WKS_CASE_API_URL: http://case-engine-rest-api:8081
+      WKS_CLIENT_ID: wks-external-tasks
+      WKS_CLIENT_SECRET: ${KEYCLOAK_EXTERNALTASKS_SECRET}
+      WEBSOCKET_ENABLED: ${WEBSOCKET_ENABLED}
+      DISABLE_BACKOFF_STRATEGY: ${DISABLE_BACKOFF_STRATEGY}
+    depends_on:
+      camunda:
+        condition: service_healthy
+      case-engine-rest-api:
+        condition: service_started
+
+  case-portal:
+    build:
+      context: ../../apps/react/case-portal
+      args:
+        GENERATE_SOURCEMAP: "false"
+    restart: unless-stopped
+    environment:
+      __SERVER_KEYCLOAK_URL__: https://${APP_HOST}/auth
+      __SERVER_API_URL__: https://${APP_HOST}/engine
+      __SERVER_STORAGE_URL__: https://${APP_HOST}
+      __SERVER_WEBSOCKETS_ENABLED__: "false"
+      __SERVER_WEBSOCKETS_URL__: ""
+      __SERVER_WEBSOCKETS_CASE_CREATED__: ""
+      __SERVER_WEBSOCKETS_HUMAN_TASK_CREATED__: ""
+      __SERVER_NOVU_ENABLED__: "false"
+      __SERVER_NOVU_PUBLISHER_API_URL__: ""
+    depends_on:
+      case-engine-rest-api:
+        condition: service_started
+      storage-api:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.case-portal.rule=Host(`${APP_HOST}`)
+      - traefik.http.routers.case-portal.entrypoints=websecure
+      - traefik.http.routers.case-portal.tls.certresolver=letsencrypt
+      - traefik.http.routers.case-portal.priority=1
+      - traefik.http.routers.case-portal.service=case-portal
+      - traefik.http.services.case-portal.loadbalancer.server.port=80
+
+  demo-data-loader:
+    build:
+      context: ../../apps/java/services/demo-data-loader
+    profiles:
+      - bootstrap
+    environment:
+      CAMUNDA7_DATA_IMPORT_ENABLED: "true"
+      CAMUNDA8_DATA_IMPORT_ENABLED: "false"
+      CAMUNDA_URL: http://camunda:8080/engine-rest
+      MONGO_DATABASE: ${TENANT_REALM}
+      MONGO_SHARED_DATABASE: shared
+      MONGO_CONN: mongodb://mongodb
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_PASS: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_DEFAULT_USER: ${KEYCLOAK_DEFAULT_USER}
+      KEYCLOAK_DEFAULT_USER_PASSWORD: ${KEYCLOAK_DEFAULT_USER_PASSWORD}
+      KEYCLOAK_DEFAULT_USER_EMAIL: ${KEYCLOAK_DEFAULT_USER_EMAIL}
+      KEYCLOAK_DEFAULT_USER_FIRST_NAME: ${KEYCLOAK_DEFAULT_USER_FIRST_NAME}
+      KEYCLOAK_DEFAULT_USER_LAST_NAME: ${KEYCLOAK_DEFAULT_USER_LAST_NAME}
+      KEYCLOAK_EXTERNALTASKS_SECRET: ${KEYCLOAK_EXTERNALTASKS_SECRET}
+      KEYCLOAK_EMAILTOCASE_SECRET: ${KEYCLOAK_EMAILTOCASE_SECRET}
+      KEYCLOAK_DATA_IMPORT_DNS: ${APP_HOST}
+      KEYCLOAK_DATA_IMPORT_PROTOCOL: https://
+      KEYCLOAK_DATA_IMPORT_PORT: ""
+      KEYCLOAK_DATA_IMPORT_REDIRECTURL: https://${APP_HOST}/*
+      KEYCLOAK_DATA_IMPORT_WEBORIGINS: https://${APP_HOST}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      camunda:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+volumes:
+  letsencrypt:
+  mongo:
+  minio:
+  keycloak:
