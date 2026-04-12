@@ -6,7 +6,7 @@
 #   http://matters.localhost      — React matter portal (staff-facing)
 #   http://auth.localhost         — Keycloak auth server (admin UI + OIDC endpoints)
 #   http://corporate.localhost    — ll-corporate Next.js portal (client-facing, host process)
-#   http://localhost:8888         — Traefik dashboard
+#   http://localhost:8889         — Traefik dashboard
 #
 # All other ports (27017, 8082, 8085, 9000, 9090, etc.) are implementation
 # details exposed by the base compose files for direct debugging access only.
@@ -69,7 +69,7 @@ services:
       - --providers.file.watch=true
     ports:
       - "80:80"
-      - "8888:8080"
+      - "8889:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./configs/traefik-local:/traefik:ro
