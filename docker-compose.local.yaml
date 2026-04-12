@@ -125,10 +125,12 @@ services:
       - traefik.http.services.case-portal.loadbalancer.server.port=80
 
   # ── Bootstrap overrides ───────────────────────────────────────────────────────
-  # Adds Keycloak admin credentials and local redirect URL configuration to the
-  # demo-data-loader. The base docker-compose.demo-data-loader.camunda7.yaml does
-  # not include these; this overlay supplies them so the bootstrap registers
-  # http://matters.localhost as a valid Keycloak redirect origin.
+  # Adds Keycloak admin credentials and redirect URL configuration to the
+  # demo-data-loader.
+  #
+  # REDIRECT URI: "*" allows any local origin (localhost:3001, matters.localhost,
+  # etc.). The bootstrap Java code only accepts a single string via @Value, so a
+  # wildcard is the pragmatic choice for local dev. Do not use "*" in production.
   #
   # FUTURE AUTOMATION: The ll-corporate Keycloak client (client ID: ll-corporate)
   # is not created by this bootstrap and must be added manually after first run.
@@ -141,8 +143,5 @@ services:
       KEYCLOAK_PASS: ${KEYCLOAK_ADMIN_PASSWORD}
       KEYCLOAK_EXTERNALTASKS_SECRET: ${KEYCLOAK_EXTERNALTASKS_SECRET}
       KEYCLOAK_EMAILTOCASE_SECRET: ${KEYCLOAK_EMAILTOCASE_SECRET}
-      KEYCLOAK_DATA_IMPORT_DNS: matters.localhost
-      KEYCLOAK_DATA_IMPORT_PROTOCOL: "http://"
-      KEYCLOAK_DATA_IMPORT_PORT: ""
-      KEYCLOAK_DATA_IMPORT_REDIRECTURL: "http://matters.localhost/*"
-      KEYCLOAK_DATA_IMPORT_WEBORIGINS: "http://matters.localhost"
+      KEYCLOAK_DATA_IMPORT_REDIRECTURL: "*"
+      KEYCLOAK_DATA_IMPORT_WEBORIGINS: "*"
