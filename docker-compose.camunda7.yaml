@@ -21,7 +21,8 @@ services:
                 
     case-engine-rest-api:
         build:
-            context: apps/java/services/case-engine-rest-api
+            context: apps/java
+            dockerfile: services/case-engine-rest-api/Dockerfile
         ports:
             - 8081:8081
         links:
@@ -42,7 +43,8 @@ services:
 
     c7-external-tasks:
         build:
-            context: apps/java/services/c7-external-tasks
+            context: apps/java
+            dockerfile: services/c7-external-tasks/Dockerfile
         links:
             - camunda
             - case-engine-rest-api

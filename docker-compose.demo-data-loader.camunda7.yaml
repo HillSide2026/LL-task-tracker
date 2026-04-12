@@ -3,7 +3,8 @@ version: '3.7'
 services:
     demo-data-loader:
         build:
-            context: apps/java/services/demo-data-loader
+            context: apps/java
+            dockerfile: services/demo-data-loader/Dockerfile
         environment:
             - CAMUNDA7_DATA_IMPORT_ENABLED=true
             - CAMUNDA8_DATA_IMPORT_ENABLED=false

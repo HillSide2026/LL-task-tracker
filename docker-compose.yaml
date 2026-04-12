@@ -64,7 +64,8 @@ services:
 
     storage-api:
         build:
-            context: apps/java/services/storage-api
+            context: apps/java
+            dockerfile: services/storage-api/Dockerfile
         ports:
             - 8085:8085
         links:
