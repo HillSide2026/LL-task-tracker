@@ -12,6 +12,8 @@ dist
 # Environment properties
 env.properties
 .env
+.env.local
+deployments/levinellp/.env
 
 ### Eclipse ###
 .metadata

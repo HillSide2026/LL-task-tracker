@@ -1,0 +1,30 @@
+# configs/traefik-local/ll-corporate.yaml
+#
+# Traefik file-provider route for ll-corporate.
+#
+# Routes http://corporate.localhost to the ll-corporate Next.js dev server
+# running on the host machine (pnpm dev, port 3000).
+#
+# host.docker.internal is a Docker Desktop for Mac / Docker Desktop for Windows
+# reserved hostname that resolves to the host machine from inside a container.
+# It is NOT available in Linux Docker Engine without explicit configuration.
+# Linux alternative: replace host.docker.internal with the host bridge IP
+# (typically 172.17.0.1), or add the following to the traefik service in
+# docker-compose.local.yaml:
+#
+#   extra_hosts:
+#     - "host.docker.internal:host-gateway"
+
+http:
+  routers:
+    ll-corporate:
+      rule: "Host(`corporate.localhost`)"
+      entrypoints:
+        - web
+      service: ll-corporate
+
+  services:
+    ll-corporate:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:3000"

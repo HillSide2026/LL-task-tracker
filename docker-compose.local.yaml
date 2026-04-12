@@ -1,0 +1,147 @@
+# docker-compose.local.yaml
+#
+# Local development overlay.
+#
+# Canonical local URLs this overlay provides:
+#   http://matters.localhost      — React matter portal (staff-facing)
+#   http://corporate.localhost    — ll-corporate Next.js portal (client-facing, host process)
+#   http://localhost:8888         — Traefik dashboard
+#
+# All other ports (27017, 8082, 8085, 9000, 9090, etc.) are implementation
+# details exposed by the base compose files for direct debugging access only.
+# Applications should be accessed through the canonical URLs above.
+#
+# INGRESS PATH NOTE
+# /api, /auth, and /storage are local ingress routing conventions defined here.
+# They are not the committed public URL structure for production.
+# Production path layout is owned by deployments/levinellp/docker-compose.camunda7.yml.
+#
+# PREREQUISITES
+# /etc/hosts must contain (run scripts/local-setup.sh to add idempotently):
+#   127.0.0.1 matters.localhost
+#   127.0.0.1 corporate.localhost
+#
+# host.docker.internal (used in configs/traefik-local/ll-corporate.yaml to reach
+# the ll-corporate dev server on the host) is a Docker Desktop for Mac / Windows
+# reserved hostname. It is NOT available in Linux Docker Engine without adding:
+#   extra_hosts:
+#     - "host.docker.internal:host-gateway"
+# to the traefik service below.
+#
+# Run command:
+#   docker compose \
+#     -f docker-compose.yaml \
+#     -f docker-compose.camunda7.yaml \
+#     -f docker-compose.demo-data-loader.camunda7.yaml \
+#     -f docker-compose.portal.yaml \
+#     -f docker-compose.local.yaml \
+#     --env-file .env.local \
+#     up -d --build
+#
+# Bootstrap (first run only):
+#   docker compose \
+#     -f docker-compose.yaml \
+#     -f docker-compose.camunda7.yaml \
+#     -f docker-compose.demo-data-loader.camunda7.yaml \
+#     -f docker-compose.portal.yaml \
+#     -f docker-compose.local.yaml \
+#     --env-file .env.local \
+#     run --rm demo-data-loader
+
+services:
+
+  # ── Reverse proxy ─────────────────────────────────────────────────────────────
+  traefik:
+    image: traefik:v2.11
+    restart: unless-stopped
+    command:
+      - --log.level=INFO
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --entrypoints.web.address=:80
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      # File provider routes services not running in Docker (e.g. ll-corporate on the host).
+      # See configs/traefik-local/ for definitions.
+      - --providers.file.directory=/traefik
+      - --providers.file.watch=true
+    ports:
+      - "80:80"
+      - "8888:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./configs/traefik-local:/traefik:ro
+
+  # ── Keycloak: serve at /auth so browser URL and internal service URL align ────
+  # Override replaces the base `start-dev` command to add --http-relative-path.
+  # KEYCLOAK_URL in .env.local must be http://keycloak:8080/auth to match.
+  keycloak:
+    command:
+      - start-dev
+      - --http-relative-path=/auth
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.keycloak.rule=Host(`matters.localhost`) && PathPrefix(`/auth`)
+      - traefik.http.routers.keycloak.entrypoints=web
+      - traefik.http.routers.keycloak.priority=100
+      - traefik.http.services.keycloak.loadbalancer.server.port=8080
+
+  # ── Case API ──────────────────────────────────────────────────────────────────
+  # http://matters.localhost/api → case-engine-rest-api (strips /api prefix)
+  case-engine-rest-api:
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.case-api.rule=Host(`matters.localhost`) && PathPrefix(`/api`)
+      - traefik.http.routers.case-api.entrypoints=web
+      - traefik.http.routers.case-api.priority=100
+      - traefik.http.routers.case-api.middlewares=strip-api
+      - traefik.http.routers.case-api.service=case-api
+      - traefik.http.middlewares.strip-api.stripprefix.prefixes=/api
+      - traefik.http.services.case-api.loadbalancer.server.port=8081
+
+  # ── Storage API ───────────────────────────────────────────────────────────────
+  # http://matters.localhost/storage → storage-api (strips /storage prefix)
+  storage-api:
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.storage.rule=Host(`matters.localhost`) && PathPrefix(`/storage`)
+      - traefik.http.routers.storage.entrypoints=web
+      - traefik.http.routers.storage.priority=100
+      - traefik.http.routers.storage.middlewares=strip-storage
+      - traefik.http.routers.storage.service=storage
+      - traefik.http.middlewares.strip-storage.stripprefix.prefixes=/storage
+      - traefik.http.services.storage.loadbalancer.server.port=8085
+
+  # ── React matter portal ───────────────────────────────────────────────────────
+  # http://matters.localhost → case-portal
+  # Priority 1 (lowest) so /api, /auth, /storage routes win on prefix match.
+  case-portal:
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.case-portal.rule=Host(`matters.localhost`)
+      - traefik.http.routers.case-portal.entrypoints=web
+      - traefik.http.routers.case-portal.priority=1
+      - traefik.http.services.case-portal.loadbalancer.server.port=80
+
+  # ── Bootstrap overrides ───────────────────────────────────────────────────────
+  # Adds Keycloak admin credentials and local redirect URL configuration to the
+  # demo-data-loader. The base docker-compose.demo-data-loader.camunda7.yaml does
+  # not include these; this overlay supplies them so the bootstrap registers
+  # http://matters.localhost as a valid Keycloak redirect origin.
+  #
+  # FUTURE AUTOMATION: The ll-corporate Keycloak client (client ID: ll-corporate)
+  # is not created by this bootstrap and must be added manually after first run.
+  # To automate, add client registration to the demo-data-loader seed data or
+  # use a Keycloak realm export/import JSON committed under configs/keycloak/.
+  # See docs/backlog/ for the tracked work item once added.
+  demo-data-loader:
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_PASS: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_EXTERNALTASKS_SECRET: ${KEYCLOAK_EXTERNALTASKS_SECRET}
+      KEYCLOAK_EMAILTOCASE_SECRET: ${KEYCLOAK_EMAILTOCASE_SECRET}
+      KEYCLOAK_DATA_IMPORT_DNS: matters.localhost
+      KEYCLOAK_DATA_IMPORT_PROTOCOL: "http://"
+      KEYCLOAK_DATA_IMPORT_PORT: ""
+      KEYCLOAK_DATA_IMPORT_REDIRECTURL: "http://matters.localhost/*"
+      KEYCLOAK_DATA_IMPORT_WEBORIGINS: "http://matters.localhost"
