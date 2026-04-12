@@ -132,7 +132,7 @@ public class CaseInstanceServiceImplTest {
 		setJwtSecurityContext("lawyer-sub-1", List.of("lawyer_user"));
 		when(commandExecutor.execute(Mockito.any(GetCaseInstanceCmd.class))).thenReturn(CaseInstance.builder()
 				.businessKey("BK-1").caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID)
-				.adminState(AdminState.ACTIVE.getCode()).stage("Open").responsibleLawyerId("other-lawyer-sub").build());
+				.adminState(AdminState.ACTIVE.getCode()).stage("Maintenance").responsibleLawyerId("other-lawyer-sub").build());
 
 		assertThrows(CaseInstanceNotFoundException.class, () -> service.get("BK-1"));
 	}
@@ -142,7 +142,7 @@ public class CaseInstanceServiceImplTest {
 		setJwtSecurityContext("lawyer-sub-1", List.of("lawyer_user"));
 		when(commandExecutor.execute(Mockito.any(GetCaseInstanceCmd.class))).thenReturn(CaseInstance.builder()
 				.businessKey("BK-1").caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID)
-				.adminState(AdminState.MAINTENANCE_LAWYER_REVIEW.getCode()).stage("Open")
+				.adminState(AdminState.MAINTENANCE_LAWYER_REVIEW.getCode()).stage("Maintenance")
 				.responsibleLawyerId("lawyer-sub-1").responsibleLawyerName("Assigned Lawyer")
 				.adminOwnerId("admin-1").adminOwnerName("Admin Owner")
 				.nextActionOwnerType(NextActionOwnerType.LAWYER.getCode()).nextActionSummary("Lawyer review pending").build());
@@ -158,7 +158,7 @@ public class CaseInstanceServiceImplTest {
 		setJwtSecurityContext("ops-admin-sub", List.of("ops_admin"));
 		when(commandExecutor.execute(Mockito.any(GetCaseInstanceCmd.class))).thenReturn(CaseInstance.builder()
 				.businessKey("BK-1").caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID)
-				.adminState(AdminState.ACTIVE.getCode()).stage("Open").adminOwnerId("admin-1")
+				.adminState(AdminState.ACTIVE.getCode()).stage("Maintenance").adminOwnerId("admin-1")
 				.nextActionOwnerType(NextActionOwnerType.ADMIN.getCode()).nextActionSummary("Control active").build());
 
 		assertThrows(AdminLifecycleException.class, () -> service.delete("BK-1"));
@@ -169,7 +169,7 @@ public class CaseInstanceServiceImplTest {
 		setJwtSecurityContext("ops-admin-sub", List.of("ops_admin"));
 		PageResult<CaseInstance> pageResult = PageResult.<CaseInstance>builder().content(new ArrayList<>(List.of(
 				CaseInstance.builder().businessKey("BK-1").caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID)
-						.adminState("Open").stage("Open").nextActionOwnerType(NextActionOwnerType.ADMIN.getCode())
+						.adminState("Open").stage("Maintenance").nextActionOwnerType(NextActionOwnerType.ADMIN.getCode())
 						.nextActionSummary("Continue control").adminOwnerId("admin-1").build())))
 				.build();
 		when(commandExecutor.execute(Mockito.any(FindCaseInstanceCmd.class))).thenReturn(pageResult);

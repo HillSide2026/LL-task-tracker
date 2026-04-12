@@ -55,7 +55,7 @@ public final class AdminLifecycleSupport {
 		return switch (state) {
 		case INTAKE_REVIEW, AWAITING_ENGAGEMENT -> AdminLifecycleStage.ONBOARDING.getCode();
 		case READY_TO_OPEN, READY_FOR_LAWYER, WAITING_ON_CLIENT -> AdminLifecycleStage.OPENING.getCode();
-		case OPENED, ACTIVE, MAINTENANCE_LAWYER_REVIEW, MAINTENANCE_CLIENT_WAIT, WAITING_ON_EXTERNAL -> AdminLifecycleStage.OPEN.getCode();
+		case OPENED, ACTIVE, MAINTENANCE_LAWYER_REVIEW, MAINTENANCE_CLIENT_WAIT, WAITING_ON_EXTERNAL -> AdminLifecycleStage.MAINTENANCE.getCode();
 		case CLOSING_REVIEW, CLOSED -> AdminLifecycleStage.CLOSING.getCode();
 		case ARCHIVED -> AdminLifecycleStage.ARCHIVED.getCode();
 		};

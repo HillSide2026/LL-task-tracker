@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://levinellp.ca/contracts/events/case-email-outbound/1.0.0",
+  "title": "CaseEmailOutboundEvent",
+  "description": "Published to Kafka topic 'case-email-outbound' when the case engine triggers an outbound email. Consumed by the email-sender service.",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["caseId"],
+  "additionalProperties": true,
+  "properties": {
+    "caseId": {
+      "type": "string",
+      "description": "The businessKey of the case triggering the email."
+    },
+    "emailId": {
+      "type": "string",
+      "description": "Internal email record ID."
+    },
+    "to": {
+      "type": "string",
+      "description": "Recipient email address."
+    },
+    "subject": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "fromName": {
+      "type": "string"
+    },
+    "templateId": {
+      "type": "string",
+      "description": "Optional email template reference."
+    }
+  }
+}

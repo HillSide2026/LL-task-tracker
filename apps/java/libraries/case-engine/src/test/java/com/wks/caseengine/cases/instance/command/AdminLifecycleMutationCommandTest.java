@@ -87,7 +87,7 @@ class AdminLifecycleMutationCommandTest {
 	@Test
 	void shouldNormalizeAndEvaluateAdminLifecycleCaseOnPatch() throws Exception {
 		CaseInstance existingCase = CaseInstance.builder().businessKey("BK-1")
-				.caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID).adminState("Open").stage("Open")
+				.caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID).adminState("Open").stage("Maintenance")
 				.nextActionSummary("Continue control").nextActionOwnerType(NextActionOwnerType.ADMIN.getCode()).build();
 		when(caseInstanceRepository.get("BK-1")).thenReturn(existingCase);
 
@@ -104,7 +104,7 @@ class AdminLifecycleMutationCommandTest {
 	@Test
 	void shouldNormalizeAndEvaluateAdminLifecycleCaseOnSave() {
 		CaseInstance caseInstance = CaseInstance.builder().businessKey("BK-2")
-				.caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID).adminState("Open").stage("Open")
+				.caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID).adminState("Open").stage("Maintenance")
 				.nextActionSummary("Continue control").nextActionOwnerType(NextActionOwnerType.ADMIN.getCode()).build();
 		when(caseInstanceRepository.save(any(CaseInstance.class))).thenReturn("saved-id");
 

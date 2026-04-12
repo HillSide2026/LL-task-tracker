@@ -176,7 +176,7 @@ public class CaseInstanceControllerTest {
 		SecurityContextHolder.setContext(
 				new MockSecurityContext("wks", "localhost", "lawyer-sub-1", List.of("lawyer_user")));
 		CaseInstance caseInstance = CaseInstance.builder().caseDefinitionId("matter-admin-opening-control")
-				.adminState("Maintenance Lawyer Review").stage("Open").responsibleLawyerId("lawyer-sub-1")
+				.adminState("Maintenance Lawyer Review").stage("Maintenance").responsibleLawyerId("lawyer-sub-1")
 				.responsibleLawyerName("Assigned Lawyer").adminOwnerId("admin-1").adminOwnerName("Admin Owner").build();
 		when(caseInstanceService.transition(Mockito.eq("BK-1"), Mockito.eq(AdminTransition.LAWYER_RETURN_TO_ACTIVE),
 				Mockito.any())).thenReturn(caseInstance);

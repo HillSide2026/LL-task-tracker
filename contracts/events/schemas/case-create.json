@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://levinellp.ca/contracts/events/case-create/1.0.0",
+  "title": "CaseCreateEvent",
+  "description": "Published to Kafka topic 'case-create' when a new case instance is created by the case engine.",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["businessKey", "caseDefinitionId"],
+  "additionalProperties": true,
+  "properties": {
+    "businessKey": {
+      "type": "string",
+      "description": "Stable unique identifier for the created case."
+    },
+    "caseDefinitionId": {
+      "type": "string",
+      "description": "The matter type (case definition) this case was created from."
+    },
+    "stage": {
+      "type": "string",
+      "description": "Initial lifecycle stage.",
+      "enum": ["Onboarding", "Opening", "Open", "Closing", "Archived"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["open", "closed"]
+    },
+    "adminState": {
+      "type": "string",
+      "description": "Initial admin state.",
+      "enum": [
+        "Intake Review",
+        "Awaiting Engagement",
+        "Ready to Open",
+        "Ready for Lawyer",
+        "Waiting on Client",
+        "Opened",
+        "Active",
+        "Maintenance Lawyer Review",
+        "Maintenance Client Wait",
+        "Waiting on External",
+        "Closing Review",
+        "Closed",
+        "Archived"
+      ]
+    },
+    "adminOwnerId": {
+      "type": "string",
+      "description": "ID of the admin user who created or owns the case."
+    },
+    "adminOwnerName": {
+      "type": "string"
+    },
+    "queueId": {
+      "type": "string"
+    },
+    "owner": {
+      "type": "object",
+      "description": "Client associated with the case.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" }
+      }
+    },
+    "attributes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "value"],
+        "properties": {
+          "name": { "type": "string" },
+          "value": { "type": "string" },
+          "type": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,173 @@
+name: Contracts CI
+
+# Runs when contract files change on any PR or push to main.
+# When a contract change is detected, triggers the ll-corporate contract-check
+# workflow and waits for it to pass before this workflow succeeds.
+#
+# Required secret: CROSS_REPO_DISPATCH_TOKEN
+#   A GitHub fine-grained PAT (or GitHub App token) with:
+#     - Actions: Read and Write on the ll-corporate repo
+#     - Contents: Read on the ll-corporate repo
+#   Scope: only the ll-corporate repository.
+#   Set in: LL-task-tracker repository Settings > Secrets > Actions.
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "contracts/**"
+      - "opa/**"
+  pull_request:
+    paths:
+      - "contracts/**"
+      - "opa/**"
+  workflow_dispatch:
+    inputs:
+      force_downstream_check:
+        description: "Run downstream check even if no contract files changed"
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  validate-contracts:
+    name: Validate contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate OpenAPI spec (lint)
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: Install OpenAPI validator
+        run: npm install -g @redocly/cli@latest --silent
+
+      - name: Lint OpenAPI spec
+        run: redocly lint contracts/openapi/case-engine-api.yaml
+
+      - name: Validate JSON Schemas
+        run: |
+          for schema in contracts/events/schemas/*.json; do
+            echo "Validating $schema..."
+            node -e "
+              const fs = require('fs');
+              const schema = JSON.parse(fs.readFileSync('$schema', 'utf8'));
+              if (!schema['\$schema']) { process.stderr.write('Missing \$schema in $schema\n'); process.exit(1); }
+              if (!schema.title) { process.stderr.write('Missing title in $schema\n'); process.exit(1); }
+              console.log('OK: $schema');
+            "
+          done
+
+      - name: Verify contract version is declared in dependency matrix
+        run: |
+          VERSION=$(grep -oP '(?<=contract_version: ")[^"]+' contracts/dependency-matrix.yaml | head -1)
+          if [ -z "$VERSION" ]; then
+            echo "ERROR: contract_version not found in contracts/dependency-matrix.yaml"
+            exit 1
+          fi
+          echo "Contract version: $VERSION"
+          echo "CONTRACT_VERSION=$VERSION" >> $GITHUB_ENV
+
+  trigger-downstream:
+    name: Trigger ll-corporate contract check
+    runs-on: ubuntu-latest
+    needs: validate-contracts
+    # Only run if we have the cross-repo token. If the secret is missing,
+    # print a clear warning but do not fail the pipeline (allows local dev without the secret).
+    steps:
+      - name: Check for cross-repo token
+        id: check-token
+        run: |
+          if [ -z "${{ secrets.CROSS_REPO_DISPATCH_TOKEN }}" ]; then
+            echo "WARNING: CROSS_REPO_DISPATCH_TOKEN secret is not set."
+            echo "Cross-repo contract validation will be skipped."
+            echo "Configure this secret to enforce downstream validation before merge."
+            echo "See contracts/OPERATIONS.md for setup instructions."
+            echo "has_token=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_token=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install GitHub CLI
+        if: steps.check-token.outputs.has_token == 'true'
+        run: |
+          type -p curl >/dev/null || (apt-get update && apt-get install curl -y)
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
+            dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | \
+            tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          apt-get update && apt-get install gh -y
+
+      - name: Read contract version
+        if: steps.check-token.outputs.has_token == 'true'
+        id: contract-version
+        run: |
+          VERSION=$(grep -oP '(?<=contract_version: ")[^"]+' contracts/dependency-matrix.yaml | head -1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Trigger ll-corporate contract-check workflow
+        if: steps.check-token.outputs.has_token == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.CROSS_REPO_DISPATCH_TOKEN }}
+        run: |
+          echo "Triggering ll-corporate contract-check with contract version ${{ steps.contract-version.outputs.version }}..."
+          gh workflow run contract-check.yml \
+            --repo HillSide2026/ll-corporate \
+            --ref main \
+            --field upstream_contract_version=${{ steps.contract-version.outputs.version }}
+
+      - name: Wait for ll-corporate contract-check to complete
+        if: steps.check-token.outputs.has_token == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.CROSS_REPO_DISPATCH_TOKEN }}
+        run: |
+          echo "Waiting for triggered run to appear..."
+          sleep 10
+
+          # Find the most recently triggered contract-check run
+          RUN_ID=$(gh run list \
+            --repo HillSide2026/ll-corporate \
+            --workflow contract-check.yml \
+            --limit 5 \
+            --json databaseId,createdAt,status \
+            --jq 'sort_by(.createdAt) | reverse | .[0].databaseId')
+
+          if [ -z "$RUN_ID" ]; then
+            echo "ERROR: Could not find triggered workflow run in ll-corporate."
+            exit 1
+          fi
+
+          echo "Watching run $RUN_ID in ll-corporate..."
+          gh run watch "$RUN_ID" \
+            --repo HillSide2026/ll-corporate \
+            --exit-status
+
+          CONCLUSION=$(gh run view "$RUN_ID" \
+            --repo HillSide2026/ll-corporate \
+            --json conclusion \
+            --jq '.conclusion')
+
+          echo "ll-corporate contract-check conclusion: $CONCLUSION"
+
+          if [ "$CONCLUSION" != "success" ]; then
+            echo ""
+            echo "ERROR: ll-corporate contract-check FAILED."
+            echo "This PR cannot merge until ll-corporate validates against the new contract."
+            echo ""
+            echo "Next steps:"
+            echo "  1. Review the ll-corporate contract-check run for details."
+            echo "  2. Update src/lib/contracts/ in ll-corporate to match the new contract."
+            echo "  3. Link the ll-corporate PR in this PR description."
+            echo "  4. Both repos must be green before either merges."
+            exit 1
+          fi
+
+          echo "ll-corporate contract-check passed. Cross-repo gate is green."

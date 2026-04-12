@@ -13,8 +13,8 @@ public enum AdminLifecycleStage implements Serializable {
 	@SerializedName("Opening")
 	OPENING("Opening"),
 
-	@SerializedName("Open")
-	OPEN("Open"),
+	@SerializedName("Maintenance")
+	MAINTENANCE("Maintenance"),
 
 	@SerializedName("Closing")
 	CLOSING("Closing"),
@@ -33,6 +33,10 @@ public enum AdminLifecycleStage implements Serializable {
 	}
 
 	public static Optional<AdminLifecycleStage> fromValue(String value) {
+		// Accept legacy "Open" serialized value from pre-rename MongoDB documents.
+		if ("Open".equals(value)) {
+			return Optional.of(MAINTENANCE);
+		}
 		for (AdminLifecycleStage stage : values()) {
 			if (stage.code.equals(value)) {
 				return Optional.of(stage);

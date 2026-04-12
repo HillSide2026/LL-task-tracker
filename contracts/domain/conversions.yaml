@@ -1,0 +1,377 @@
+# Cross-Domain Conversion Commands and Events
+# All cross-domain object transitions must use these explicit contracts.
+# Implicit stage sync and implicit Matter creation are prohibited.
+#
+# Rules:
+# - Commands are idempotent (idempotencyKey required)
+# - Canonical object creation completes first in the owning domain
+# - Downstream backlink updates are secondary and retryable
+# - Failure to update a backlink must not create duplicate canonical objects
+# - All commands require an explicit audit identity (requestedBy)
+
+openapi: "3.0.3"
+info:
+  title: Cross-Domain Conversion Contracts
+  version: "1.0.0"
+  description: |
+    Command schemas, event schemas, and API endpoints for all cross-domain
+    object conversion paths. These are the only approved paths for creating
+    relationships between Commercial, Matter, and Commerce domain objects.
+
+servers:
+  - url: https://matters.levinellp.ca
+    description: Production (ll-task-tracker hosts Matter conversion endpoints)
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+
+    # ── Commands ───────────────────────────────────────────────────────────────
+
+    CreateMatterFromOpportunityCommand:
+      type: object
+      description: |
+        Explicit command to create a Matter from a qualified Opportunity.
+        Issued only by approved application/service paths.
+        Idempotent: duplicate requests with the same idempotencyKey return the existing Matter.
+        Validates Opportunity eligibility before Matter creation.
+        On success: emits OpportunityConvertedToMatterEvent.
+      required:
+        - opportunityId
+        - primaryContactId
+        - idempotencyKey
+        - requestedBy
+      properties:
+        opportunityId:
+          type: string
+        primaryContactId:
+          type: string
+        idempotencyKey:
+          type: string
+          description: Caller-supplied stable key. Use opportunityId if no better key exists.
+        matterType:
+          type: string
+          nullable: true
+          description: Optional initial Matter type classification.
+        requestedBy:
+          type: string
+          description: Authenticated user or service identity initiating the command.
+        notes:
+          type: string
+          nullable: true
+
+    CreateOpportunityFromProductOrderCommand:
+      type: object
+      description: |
+        Explicit command to create a commercial Opportunity from a ProductOrder.
+        Requires a separate engagement decision boundary — a ProductOrder does NOT
+        automatically create an Opportunity.
+        On success: emits ProductOrderConvertedToOpportunityEvent.
+        The resulting Opportunity remains a Commercial-domain object.
+        No Matter exists unless a later approved Matter conversion occurs.
+      required:
+        - productOrderId
+        - primaryContactId
+        - idempotencyKey
+        - requestedBy
+      properties:
+        productOrderId:
+          type: string
+        primaryContactId:
+          type: string
+          description: Commercial Contact identity for the Opportunity.
+        idempotencyKey:
+          type: string
+        requestedBy:
+          type: string
+        notes:
+          type: string
+          nullable: true
+
+    LinkProductOrderToMatterCommand:
+      type: object
+      description: |
+        Explicit command to associate an existing ProductOrder with an existing Matter.
+        Does not create a Matter. Does not allow ProductOrder status to influence Matter state.
+        Matter must already exist in ll-task-tracker.
+        On success: emits ProductOrderLinkedToMatterEvent.
+      required:
+        - productOrderId
+        - matterId
+        - idempotencyKey
+        - requestedBy
+      properties:
+        productOrderId:
+          type: string
+        matterId:
+          type: string
+          description: The Matter's businessKey in ll-task-tracker.
+        idempotencyKey:
+          type: string
+        linkType:
+          type: string
+          description: The nature of the link (e.g. "related_service", "associated_product").
+        requestedBy:
+          type: string
+
+    # ── Events ─────────────────────────────────────────────────────────────────
+
+    OpportunityConvertedToMatterEvent:
+      type: object
+      description: |
+        Domain event emitted after successful CreateMatterFromOpportunity command.
+        Published to Kafka topic: opportunity-converted-to-matter
+        Effects:
+          - Matter exists in ll-task-tracker with matterLifecycleStage=Onboarding, matterState=Pending
+          - Commercial system should record matterId on the Opportunity
+          - Opportunity opportunityStatus transitions to "Converted"
+      required:
+        - eventId
+        - opportunityId
+        - matterId
+        - matterLifecycleStage
+        - matterState
+        - occurredAt
+      properties:
+        eventId:
+          type: string
+          description: Unique event ID for deduplication.
+        opportunityId:
+          type: string
+        matterId:
+          type: string
+          description: The new Matter's businessKey.
+        matterLifecycleStage:
+          type: string
+          enum: [Onboarding]
+        matterState:
+          type: string
+          enum: [Pending]
+        originContactId:
+          type: string
+          nullable: true
+        requestedBy:
+          type: string
+        idempotencyKey:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        idempotent:
+          type: boolean
+          description: True if this event was replayed from an existing idempotent match.
+
+    ProductOrderConvertedToOpportunityEvent:
+      type: object
+      description: |
+        Domain event emitted after successful CreateOpportunityFromProductOrder command.
+        Published to Kafka topic: product-order-converted-to-opportunity
+        The resulting Opportunity is a Commercial-domain object.
+        No Matter exists at this point.
+      required:
+        - eventId
+        - productOrderId
+        - opportunityId
+        - occurredAt
+      properties:
+        eventId:
+          type: string
+        productOrderId:
+          type: string
+        opportunityId:
+          type: string
+          description: The new Opportunity's ID in the commercial system.
+        primaryContactId:
+          type: string
+          nullable: true
+        requestedBy:
+          type: string
+        idempotencyKey:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+
+    ProductOrderLinkedToMatterEvent:
+      type: object
+      description: |
+        Domain event emitted after successful LinkProductOrderToMatter command.
+        Published to Kafka topic: product-order-linked-to-matter
+        This link does NOT imply the ProductOrder created the Matter.
+        This link does NOT permit ProductOrder status to influence Matter state.
+      required:
+        - eventId
+        - productOrderId
+        - matterId
+        - occurredAt
+      properties:
+        eventId:
+          type: string
+        productOrderId:
+          type: string
+        matterId:
+          type: string
+        linkType:
+          type: string
+          nullable: true
+        requestedBy:
+          type: string
+        idempotencyKey:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+
+    # ── Failure response ───────────────────────────────────────────────────────
+
+    ConversionError:
+      type: object
+      description: Error response for failed conversion commands.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          enum:
+            - OPPORTUNITY_NOT_FOUND
+            - OPPORTUNITY_NOT_QUALIFIED
+            - OPPORTUNITY_ALREADY_CONVERTED
+            - PRODUCT_ORDER_NOT_FOUND
+            - MATTER_NOT_FOUND
+            - DUPLICATE_IDEMPOTENCY_KEY_CONFLICT
+            - AUTHORIZATION_DENIED
+            - VALIDATION_ERROR
+        message:
+          type: string
+        idempotencyKey:
+          type: string
+          nullable: true
+        existingMatterId:
+          type: string
+          nullable: true
+          description: |
+            Present when code=OPPORTUNITY_ALREADY_CONVERTED or when idempotent match found.
+            Use this to retrieve the existing Matter rather than retrying.
+
+# ── Kafka event topics ─────────────────────────────────────────────────────────
+# These topics are published by ll-task-tracker or the commercial system.
+# Consumers should subscribe to these for eventual-consistency backlink updates.
+
+x-kafka-topics:
+  opportunity-converted-to-matter:
+    schema: OpportunityConvertedToMatterEvent
+    publisher: ll-task-tracker
+    consumers:
+      - marketing/commercial system (record matterId on Opportunity)
+      - ll-corporate (optional: update portal state)
+  product-order-converted-to-opportunity:
+    schema: ProductOrderConvertedToOpportunityEvent
+    publisher: marketing/commercial system
+    consumers:
+      - ll-corporate (update ProductOrder with convertedOpportunityId)
+  product-order-linked-to-matter:
+    schema: ProductOrderLinkedToMatterEvent
+    publisher: ll-task-tracker
+    consumers:
+      - ll-corporate (update ProductOrder with convertedMatterId)
+
+# ── Conversion endpoints (hosted by ll-task-tracker) ──────────────────────────
+# These endpoints are added to contracts/openapi/case-engine-api.yaml.
+# Reproduced here for cross-reference.
+
+paths:
+  /matter/from-opportunity:
+    post:
+      operationId: createMatterFromOpportunity
+      summary: Create a Matter from a qualified Opportunity
+      description: |
+        Explicit conversion command. Validates Opportunity eligibility, creates
+        a canonical Matter record in ll-task-tracker, and emits
+        OpportunityConvertedToMatterEvent.
+
+        Idempotent: if the same idempotencyKey is received again, returns the
+        existing Matter rather than creating a new one.
+
+        The commercial system must record the returned matterId on the Opportunity
+        as a backlink. This may be done immediately or via the event.
+      tags: [Matter Conversion]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMatterFromOpportunityCommand"
+      responses:
+        "200":
+          description: Matter created (or existing Matter returned for idempotent replay).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatterCreationResult"
+        "409":
+          description: Opportunity already converted to a different Matter (non-idempotent conflict).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversionError"
+        "400":
+          description: Validation error or Opportunity not qualified.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversionError"
+        "401":
+          description: Unauthorized.
+        "403":
+          description: Forbidden — caller not authorized to create Matters.
+
+  /case/{businessKey}/link-product-order/{productOrderId}:
+    post:
+      operationId: linkProductOrderToMatter
+      summary: Explicitly associate a ProductOrder with an existing Matter
+      description: |
+        Records an explicit association between a ProductOrder and an existing Matter.
+        Does not create a Matter. Does not allow ProductOrder status to affect Matter state.
+        Emits ProductOrderLinkedToMatterEvent on success.
+      tags: [Matter Conversion]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: productOrderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LinkProductOrderToMatterCommand"
+      responses:
+        "204":
+          description: Link recorded.
+        "404":
+          description: Matter or ProductOrder not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversionError"
+        "400":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversionError"

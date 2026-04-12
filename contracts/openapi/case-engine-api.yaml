@@ -1,0 +1,1140 @@
+openapi: "3.0.3"
+
+info:
+  title: Case Engine API
+  description: |
+    REST API for the LL-task-tracker case engine. This is the canonical contract
+    for all consumers (including ll-corporate). The case engine is the system of
+    record for lifecycle state, workflow transitions, permissions, and operational control.
+
+    Domain authority: ll-task-tracker is the canonical Matter domain owner.
+    See contracts/domain/AUTHORITY-MAP.md for full cross-domain authority rules.
+  version: "1.1.0"
+  contact:
+    name: Levine Law Platform Team
+
+servers:
+  - url: https://matters.levinellp.ca
+    description: Production
+  - url: http://localhost:8081
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak-issued JWT. Obtain from the Keycloak realm token endpoint.
+
+  schemas:
+
+    # ── Enums ──────────────────────────────────────────────────────────────────
+
+    AdminState:
+      type: string
+      description: Operational state of a matter within its lifecycle stage.
+      enum:
+        - "Intake Review"
+        - "Awaiting Engagement"
+        - "Ready to Open"
+        - "Ready for Lawyer"
+        - "Waiting on Client"
+        - "Opened"
+        - "Active"
+        - "Maintenance Lawyer Review"
+        - "Maintenance Client Wait"
+        - "Waiting on External"
+        - "Closing Review"
+        - "Closed"
+        - "Archived"
+
+    AdminLifecycleStage:
+      type: string
+      description: High-level lifecycle stage of a matter.
+      enum:
+        - "Onboarding"
+        - "Opening"
+        - "Maintenance"
+        - "Closing"
+        - "Archived"
+
+    AdminHealth:
+      type: string
+      description: Health signal for a matter based on automated control evaluation.
+      enum:
+        - "Green"
+        - "Amber"
+        - "Red"
+
+    AdminHealthReasonCode:
+      type: string
+      description: Machine-readable reason codes for a non-Green health status.
+      enum:
+        - DUE_RISK
+        - WAITING_STALE
+        - CONTROL_INCOMPLETE
+        - MISSING_ADMIN_STATE
+        - MISSING_STAGE
+        - MISSING_NEXT_ACTION_SUMMARY
+        - MISSING_NEXT_ACTION_OWNER
+        - MISSING_RESPONSIBLE_LAWYER
+        - MISSING_WAITING_SINCE
+        - MISSING_RESUME_TO_STATE
+        - MISSING_EXPECTED_RESPONSE_AT
+        - STAGE_STATE_MISMATCH
+        - LAWYER_RESPONSE_STALE
+        - EXTERNAL_RESPONSE_STALE
+        - UNOWNED_ACTIVE_CASE
+        - INVALID_RESUME_TARGET
+        - MISSING_EXTERNAL_PARTY_REF
+
+    AdminEventType:
+      type: string
+      description: Type of admin lifecycle event recorded against a matter.
+      enum:
+        - CASE_CREATED
+        - STATE_CHANGED
+        - STAGE_CHANGED
+        - WAIT_STARTED
+        - WAIT_RESUMED
+        - NEXT_ACTION_SET
+        - OWNER_ASSIGNED
+        - LAWYER_HANDOFF_SENT
+        - LAWYER_HANDOFF_RETURNED
+        - OVERRIDE_APPLIED
+        - CASE_OPENED
+        - CASE_ACTIVATED
+
+    NextActionOwnerType:
+      type: string
+      description: Who owns the next action on a matter.
+      enum:
+        - Admin
+        - Lawyer
+        - Client
+        - External
+        - System
+
+    AdminTransition:
+      type: string
+      description: Named lifecycle transition that can be applied to a matter.
+      enum:
+        - submitIntakeReview
+        - markAwaitingEngagement
+        - markReadyToOpen
+        - sendToLawyerReview
+        - lawyerApproveOpen
+        - lawyerReturnForFixes
+        - startClientWait
+        - resumeFromClientWait
+        - activateMatter
+        - updateMaintenanceControl
+        - sendToMaintenanceLawyerReview
+        - lawyerReturnToActive
+        - startMaintenanceClientWait
+        - resumeFromMaintenanceClientWait
+        - startExternalWait
+        - resumeFromExternalWait
+        - lawyerRequestClientFollowup
+        - lawyerRequestExternalFollowup
+
+    CaseStatus:
+      type: string
+      description: Process-level status of a case instance.
+      enum:
+        - open
+        - closed
+
+    # ── Component Objects ──────────────────────────────────────────────────────
+
+    CaseOwner:
+      type: object
+      description: The client (owner) associated with a case.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+
+    CaseAttribute:
+      type: object
+      description: Arbitrary key-value metadata stored on a case.
+      required: [name, value]
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        type:
+          type: string
+
+    CaseDocument:
+      type: object
+      description: A document attached to a case.
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          description: MIME type or document category.
+        size:
+          type: string
+        base64:
+          type: string
+          description: Base64-encoded document content. Present only in upload requests; omitted from list responses.
+
+    CaseComment:
+      type: object
+      description: A comment posted on a case.
+      properties:
+        id:
+          type: string
+        body:
+          type: string
+        userName:
+          type: string
+        userId:
+          type: string
+        parentId:
+          type: string
+          description: Set when this comment is a reply to another.
+        createdAt:
+          type: string
+          format: date-time
+        caseId:
+          type: string
+
+    AdminEvent:
+      type: object
+      description: An immutable audit event recording a lifecycle change on a case.
+      properties:
+        eventType:
+          $ref: "#/components/schemas/AdminEventType"
+        occurredAt:
+          type: string
+          format: date-time
+        actorType:
+          type: string
+        actorId:
+          type: string
+        actorName:
+          type: string
+        fromState:
+          type: string
+        toState:
+          type: string
+        fromStage:
+          type: string
+        toStage:
+          type: string
+        reasonCode:
+          type: string
+        note:
+          type: string
+
+    CaseInstance:
+      type: object
+      description: |
+        A matter (case instance) managed by the case engine. This is the primary
+        domain object. Consumers MUST treat adminState, adminHealth, and all lifecycle
+        fields as read-only display data — only the case engine may transition them.
+      properties:
+        businessKey:
+          type: string
+          description: Stable unique identifier for the matter.
+        caseDefinitionId:
+          type: string
+          description: References the case definition (matter type) this instance is based on.
+        stage:
+          $ref: "#/components/schemas/AdminLifecycleStage"
+        status:
+          $ref: "#/components/schemas/CaseStatus"
+        owner:
+          $ref: "#/components/schemas/CaseOwner"
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/CaseComment"
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/CaseDocument"
+        attributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/CaseAttribute"
+        queueId:
+          type: string
+        adminState:
+          $ref: "#/components/schemas/AdminState"
+        adminHealth:
+          $ref: "#/components/schemas/AdminHealth"
+        healthReasonCodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminHealthReasonCode"
+        healthEvaluatedAt:
+          type: string
+          format: date-time
+        staleSince:
+          type: string
+          format: date-time
+        malformedCase:
+          type: boolean
+        adminOwnerId:
+          type: string
+        adminOwnerName:
+          type: string
+        responsibleLawyerId:
+          type: string
+        responsibleLawyerName:
+          type: string
+        nextActionOwnerType:
+          $ref: "#/components/schemas/NextActionOwnerType"
+        nextActionOwnerRef:
+          type: string
+        nextActionSummary:
+          type: string
+        nextActionDueAt:
+          type: string
+          format: date-time
+        waitingReasonCode:
+          type: string
+        waitingReasonText:
+          type: string
+        waitingSince:
+          type: string
+          format: date-time
+        expectedResponseAt:
+          type: string
+          format: date-time
+        externalPartyRef:
+          type: string
+        resumeToState:
+          type: string
+        lastStateChangedAt:
+          type: string
+          format: date-time
+        openedAt:
+          type: string
+          format: date-time
+        adminEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminEvent"
+        # Domain vocabulary fields (added in 1.1.0)
+        matterType:
+          type: string
+          description: |
+            Classification of the type of engagement. Set by the Matter domain only.
+            Does not define lifecycle stage or state. PRODUCT is explicitly excluded.
+            Spec reference: contracts/domain/vocabulary.yaml#MatterType
+        matterState:
+          type: string
+          description: |
+            Canonical cross-domain Matter status projection.
+            fieldName: matterState (spec-canonical)
+            Values: Pending (at creation), Active, Closed, Archived
+            Derived from adminState + status. Provided for non-Matter-domain consumers.
+            The internal adminState remains the authoritative operational field.
+          enum:
+            - Pending
+            - Active
+            - Closed
+            - Archived
+        # Origin linkage fields (nullable — set only through approved conversion paths)
+        originOpportunityId:
+          type: string
+          nullable: true
+          description: |
+            ID of the Opportunity this Matter was created from, if applicable.
+            Set at Matter creation via CreateMatterFromOpportunity. Null otherwise.
+            Read-only after creation.
+        originContactId:
+          type: string
+          nullable: true
+          description: |
+            Commercial Contact ID of the primary contact for this Matter.
+            Set at Matter creation. Read-only after creation.
+        originProductOrderId:
+          type: string
+          nullable: true
+          description: |
+            ProductOrder ID explicitly linked to this Matter, if applicable.
+            Set only via LinkProductOrderToMatter command. Null by default.
+            A ProductOrder does NOT create a Matter — this link must be explicit.
+
+    Task:
+      type: object
+      description: A Camunda human task associated with a case workflow.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        owner:
+          type: string
+        assignee:
+          type: string
+        priority:
+          type: string
+        tenantId:
+          type: string
+        executionId:
+          type: string
+        processInstanceId:
+          type: string
+        processDefinitionId:
+          type: string
+        caseInstanceId:
+          type: string
+        caseDefinitionId:
+          type: string
+        taskDefinitionKey:
+          type: string
+        formKey:
+          type: string
+        created:
+          type: string
+          format: date-time
+        due:
+          type: string
+          format: date-time
+        followUp:
+          type: string
+          format: date-time
+
+    AdminTransitionRequest:
+      type: object
+      description: Optional request body when triggering a lifecycle transition.
+      properties:
+        note:
+          type: string
+          description: Reason or note to record with the transition.
+        nextActionOwnerType:
+          $ref: "#/components/schemas/NextActionOwnerType"
+        nextActionOwnerRef:
+          type: string
+        nextActionSummary:
+          type: string
+        nextActionDueAt:
+          type: string
+          format: date-time
+        waitingReasonCode:
+          type: string
+        waitingReasonText:
+          type: string
+        expectedResponseAt:
+          type: string
+          format: date-time
+        externalPartyRef:
+          type: string
+        resumeToState:
+          type: string
+
+    CaseInstancePage:
+      type: object
+      description: Paginated list of case instances.
+      required: [data, paging]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CaseInstance"
+        paging:
+          type: object
+          required: [hasNext, hasPrevious, cursors]
+          properties:
+            hasNext:
+              type: boolean
+            hasPrevious:
+              type: boolean
+            cursors:
+              type: object
+              required: [before, after]
+              properties:
+                before:
+                  type: string
+                  description: Cursor for the previous page. Empty string when not present.
+                after:
+                  type: string
+                  description: Cursor for the next page. Empty string when not present.
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: UP
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        field:
+          type: string
+
+    # ── Conversion schemas (added in 1.1.0) ────────────────────────────────────
+
+    MatterCreationResult:
+      type: object
+      description: |
+        Response from POST /matter/from-opportunity.
+        Contains the new Matter's identity and initial lifecycle state for
+        backlink recording by the commercial system.
+      required:
+        - matterId
+        - matterLifecycleStage
+        - matterState
+        - originOpportunityId
+        - createdAt
+      properties:
+        matterId:
+          type: string
+          description: The Matter's businessKey. Canonical identifier.
+        matterType:
+          type: string
+          nullable: true
+        matterLifecycleStage:
+          type: string
+          enum: [Onboarding]
+          description: Always "Onboarding" for newly created Matters.
+        matterState:
+          type: string
+          enum: [Pending]
+          description: Always "Pending" for newly created Matters.
+        originOpportunityId:
+          type: string
+        originContactId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        idempotent:
+          type: boolean
+          description: True if this request matched an existing idempotency key and returned an existing Matter.
+
+    MatterCreationRequest:
+      type: object
+      description: |
+        Request body for POST /matter/from-opportunity.
+        Validated by the Matter domain before Matter creation.
+      required:
+        - opportunityId
+        - primaryContactId
+        - idempotencyKey
+        - requestedBy
+      properties:
+        opportunityId:
+          type: string
+        primaryContactId:
+          type: string
+        idempotencyKey:
+          type: string
+          description: |
+            Caller-supplied stable key. Recommend using opportunityId.
+            Duplicate requests return the existing Matter rather than creating a new one.
+        matterType:
+          type: string
+          nullable: true
+        requestedBy:
+          type: string
+          description: Authenticated user or service identity requesting creation.
+        notes:
+          type: string
+          nullable: true
+
+    ConversionError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - OPPORTUNITY_NOT_FOUND
+            - OPPORTUNITY_NOT_QUALIFIED
+            - OPPORTUNITY_ALREADY_CONVERTED
+            - MATTER_NOT_FOUND
+            - DUPLICATE_IDEMPOTENCY_KEY_CONFLICT
+            - AUTHORIZATION_DENIED
+            - VALIDATION_ERROR
+        message:
+          type: string
+        idempotencyKey:
+          type: string
+          nullable: true
+        existingMatterId:
+          type: string
+          nullable: true
+          description: Present when the Opportunity was already converted. Use to retrieve the existing Matter.
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid Bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Authenticated but not authorized (OPA denied).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    BadRequest:
+      description: Invalid arguments or constraint violation.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+# ── Paths ──────────────────────────────────────────────────────────────────────
+
+paths:
+
+  /healthCheck:
+    get:
+      operationId: getHealth
+      summary: Health check
+      security: []
+      tags: [Health]
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /case:
+    get:
+      operationId: listCases
+      summary: List case instances
+      description: |
+        Returns a cursor-paginated list of case instances matching the given filters.
+        Pagination uses opaque cursors. Do not construct or parse cursor values.
+      tags: [Case Instance]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/CaseStatus"
+        - name: caseDefinitionId
+          in: query
+          schema:
+            type: string
+        - name: adminState
+          in: query
+          schema:
+            $ref: "#/components/schemas/AdminState"
+        - name: adminHealth
+          in: query
+          schema:
+            $ref: "#/components/schemas/AdminHealth"
+        - name: nextActionOwnerType
+          in: query
+          schema:
+            $ref: "#/components/schemas/NextActionOwnerType"
+        - name: queueId
+          in: query
+          schema:
+            type: string
+        - name: adminOwnerId
+          in: query
+          schema:
+            type: string
+        - name: healthReasonCode
+          in: query
+          schema:
+            $ref: "#/components/schemas/AdminHealthReasonCode"
+        - name: malformedCase
+          in: query
+          schema:
+            type: string
+        - name: exceptionOnly
+          in: query
+          schema:
+            type: string
+        - name: before
+          in: query
+          description: Cursor for the previous page (from paging.cursors.before).
+          schema:
+            type: string
+        - name: after
+          in: query
+          description: Cursor for the next page (from paging.cursors.after).
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            description: "Field to sort by, e.g. lastStateChangedAt or nextActionDueAt."
+        - name: limit
+          in: query
+          schema:
+            type: string
+            description: Maximum number of results to return.
+      responses:
+        "200":
+          description: Paginated list of matching case instances.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseInstancePage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      operationId: createCase
+      summary: Create a new case instance
+      tags: [Case Instance]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseInstance"
+      responses:
+        "200":
+          description: The newly created case instance.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseInstance"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /case/{businessKey}:
+    get:
+      operationId: getCase
+      summary: Get a case instance by business key
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The case instance.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseInstance"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      operationId: patchCase
+      summary: Partially update non-lifecycle fields on a case
+      description: |
+        JSON merge patch (RFC 7396). Admin lifecycle fields (adminState, adminHealth,
+        responsibleLawyerId, nextAction*, waiting*, etc.) are blocked — use the
+        transition endpoint instead.
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: "#/components/schemas/CaseInstance"
+      responses:
+        "204":
+          description: Patch applied.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteCase
+      summary: Delete a case instance
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Case deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /case/{businessKey}/transition/{transitionName}:
+    post:
+      operationId: transitionCase
+      summary: Trigger a named lifecycle transition on a case
+      description: |
+        Applies one of the defined AdminTransition values to move the case to
+        the next lifecycle state. The case engine validates whether the transition
+        is allowed given the current state and role. Consumers MUST NOT infer
+        allowed transitions from the current adminState — always defer to the
+        backend for eligibility.
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: transitionName
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/AdminTransition"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminTransitionRequest"
+      responses:
+        "200":
+          description: The updated case instance after transition.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseInstance"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /case/{businessKey}/document:
+    post:
+      operationId: saveDocument
+      summary: Attach a document to a case
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseDocument"
+      responses:
+        "204":
+          description: Document attached.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /case/{businessKey}/comment:
+    post:
+      operationId: addComment
+      summary: Add a comment to a case
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseComment"
+      responses:
+        "204":
+          description: Comment added.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /case/{businessKey}/comment/{commentId}:
+    put:
+      operationId: updateComment
+      summary: Update an existing comment
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseComment"
+      responses:
+        "204":
+          description: Comment updated.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteComment
+      summary: Delete a comment
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Comment deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /task:
+    get:
+      operationId: listTasks
+      summary: List tasks, optionally scoped to a case
+      tags: [Task]
+      parameters:
+        - name: businessKey
+          in: query
+          description: Filter to tasks belonging to this case.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of tasks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /task/{taskId}/claim/{taskAssignee}:
+    post:
+      operationId: claimTask
+      summary: Claim a task for an assignee
+      tags: [Task]
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: taskAssignee
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Task claimed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /task/{taskId}/unclaim:
+    post:
+      operationId: unclaimTask
+      summary: Release a task claim
+      tags: [Task]
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Task unclaimed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ── Matter Conversion endpoints (added in 1.1.0) ─────────────────────────────
+
+  /matter/from-opportunity:
+    post:
+      operationId: createMatterFromOpportunity
+      summary: Create a Matter from a qualified Opportunity
+      description: |
+        Explicit conversion command. The only approved path for creating a Matter
+        from a Commercial-domain Opportunity.
+
+        Validates Opportunity eligibility, creates a canonical Matter in ll-task-tracker,
+        and emits OpportunityConvertedToMatterEvent (Kafka: opportunity-converted-to-matter).
+
+        **Idempotent:** duplicate requests with the same idempotencyKey return the existing
+        Matter rather than creating a new one (idempotent=true in response).
+
+        The calling system must record the returned matterId as a backlink on the Opportunity.
+        This may be done via the event or immediately from this response.
+
+        Authority note: only the Matter domain (ll-task-tracker) may create Matters.
+        The commercial system issues this command but does not own the resulting Matter.
+      tags: [Matter Conversion]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MatterCreationRequest"
+      responses:
+        "200":
+          description: Matter created, or existing Matter returned for idempotent replay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatterCreationResult"
+        "409":
+          description: Opportunity already converted to a different Matter (non-idempotent conflict).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversionError"
+        "400":
+          description: Validation error or Opportunity not qualified.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversionError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /case/{businessKey}/link-product-order/{productOrderId}:
+    post:
+      operationId: linkProductOrderToMatter
+      summary: Explicitly associate a ProductOrder with an existing Matter
+      description: |
+        Records an explicit link between a ProductOrder (Commerce domain) and an
+        existing Matter (Matter domain).
+
+        This does NOT create a Matter. A ProductOrder does not create a Matter by default.
+        ProductOrder status MUST NOT influence Matter state.
+        Emits ProductOrderLinkedToMatterEvent (Kafka: product-order-linked-to-matter).
+
+        Authority note: only the Matter domain may record this link on the Matter record.
+      tags: [Matter Conversion]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: productOrderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idempotencyKey, requestedBy]
+              properties:
+                idempotencyKey:
+                  type: string
+                linkType:
+                  type: string
+                  description: Nature of the link (e.g. related_service, associated_product).
+                requestedBy:
+                  type: string
+      responses:
+        "204":
+          description: Link recorded.
+        "404":
+          description: Matter or ProductOrder not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversionError"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"

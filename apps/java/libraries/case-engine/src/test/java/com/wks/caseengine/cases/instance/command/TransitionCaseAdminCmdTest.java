@@ -69,7 +69,7 @@ class TransitionCaseAdminCmdTest {
 	void shouldActivateOpenedMatterAndEmitCaseActivatedEvent() throws Exception {
 		CaseInstance existingCase = CaseInstance.builder().businessKey("BK-1")
 				.caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID).adminState(AdminState.OPENED.getCode())
-				.stage("Open").status("WIP_CASE_STATUS").queueId(AdminLifecycleSupport.QUEUE_OPEN)
+				.stage("Maintenance").status("WIP_CASE_STATUS").queueId(AdminLifecycleSupport.QUEUE_OPEN)
 				.adminOwnerId("admin-1").adminOwnerName("Admin Owner")
 				.responsibleLawyerId("lawyer-sub-1").responsibleLawyerName("Assigned Lawyer")
 				.nextActionOwnerType(NextActionOwnerType.ADMIN.getCode()).nextActionSummary("Activate control").build();
@@ -92,7 +92,7 @@ class TransitionCaseAdminCmdTest {
 		CaseInstance existingCase = CaseInstance.builder().businessKey("BK-1")
 				.caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID)
 				.adminState(AdminState.MAINTENANCE_CLIENT_WAIT.getCode()).resumeToState(AdminState.READY_TO_OPEN.getCode())
-				.stage("Open").status("WIP_CASE_STATUS").adminOwnerId("admin-1").adminOwnerName("Admin Owner")
+				.stage("Maintenance").status("WIP_CASE_STATUS").adminOwnerId("admin-1").adminOwnerName("Admin Owner")
 				.nextActionOwnerType(NextActionOwnerType.CLIENT.getCode()).nextActionSummary("Await client response")
 				.waitingReasonCode("CLIENT_DOCS").waitingReasonText("Await client documents")
 				.waitingSince("2026-04-01").expectedResponseAt("2026-04-15").build();
@@ -108,7 +108,7 @@ class TransitionCaseAdminCmdTest {
 	void shouldKeepProtectedFieldsStableDuringMaintenanceControlUpdate() throws Exception {
 		CaseInstance existingCase = CaseInstance.builder().businessKey("BK-1")
 				.caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID).adminState(AdminState.ACTIVE.getCode())
-				.stage("Open").status("WIP_CASE_STATUS").queueId(AdminLifecycleSupport.QUEUE_ACTIVE)
+				.stage("Maintenance").status("WIP_CASE_STATUS").queueId(AdminLifecycleSupport.QUEUE_ACTIVE)
 				.adminOwnerId("admin-1").adminOwnerName("Admin Owner")
 				.responsibleLawyerId("lawyer-sub-1").responsibleLawyerName("Assigned Lawyer")
 				.nextActionOwnerType(NextActionOwnerType.ADMIN.getCode()).nextActionOwnerRef("Admin Owner")
@@ -125,7 +125,7 @@ class TransitionCaseAdminCmdTest {
 
 		verify(caseInstanceRepository).update(eq("BK-1"), caseInstanceCaptor.capture());
 		assertEquals(AdminState.ACTIVE.getCode(), updatedCase.getAdminState());
-		assertEquals("Open", updatedCase.getStage());
+		assertEquals("Maintenance", updatedCase.getStage());
 		assertEquals(CaseStatus.WIP_CASE_STATUS, updatedCase.getStatus());
 		assertEquals(AdminLifecycleSupport.QUEUE_ACTIVE, updatedCase.getQueueId());
 		assertEquals("admin-2", updatedCase.getAdminOwnerId());

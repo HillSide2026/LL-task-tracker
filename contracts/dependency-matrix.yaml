@@ -1,0 +1,128 @@
+# Dependency Matrix
+# Machine-readable record of cross-repo dependencies between LL-task-tracker and ll-corporate.
+# CI uses this to determine which integration checks to run when contracts change.
+# Update this file whenever a contract version is bumped or a new integration point is added.
+
+schema_version: "1"
+
+# Domain authority references
+domain_authority:
+  matter: ll-task-tracker
+  commercial: commercial-system
+  commerce: ll-corporate-commerce
+  acquisition: public-website
+  spec: contracts/domain/AUTHORITY-MAP.md
+
+services:
+  ll-task-tracker:
+    description: |
+      Case engine REST API and event bus. Canonical Matter domain owner.
+      System of record for all Matter lifecycle, workflow state, authorization,
+      and operational control. No other system may define or transition Matter state.
+    domain: matter
+    contract_version: "1.1.0"
+    publishes:
+      rest_api:
+        spec: contracts/openapi/case-engine-api.yaml
+        base_url_env: LL_TASK_TRACKER_API_BASE_URL
+      events:
+        - topic: case-create
+          schema: contracts/events/schemas/case-create.json
+        - topic: human-task-create
+          schema: contracts/events/schemas/human-task-create.json
+        - topic: case-email-outbound
+          schema: contracts/events/schemas/case-email-outbound.json
+        - topic: opportunity-converted-to-matter
+          schema: contracts/domain/conversions.yaml#OpportunityConvertedToMatterEvent
+        - topic: product-order-linked-to-matter
+          schema: contracts/domain/conversions.yaml#ProductOrderLinkedToMatterEvent
+
+  ll-corporate:
+    description: |
+      Next.js corporate portal. Presentation layer, auth boundary, and Commerce domain
+      serving surface. Consumes ll-task-tracker REST API for Matter data.
+      Also serves as the Commerce domain surface for ProductOrder flows.
+    domain: [portal, commerce-serving-surface]
+    consumes:
+      ll-task-tracker:
+        api_contract_version: "^1.1.0"
+        endpoints:
+          - GET /healthCheck
+          - GET /case
+          - GET /case/{businessKey}
+          - PATCH /case/{businessKey}
+          - POST /case/{businessKey}/transition/{transitionName}
+          - POST /case/{businessKey}/comment
+          - PUT /case/{businessKey}/comment/{commentId}
+          - DELETE /case/{businessKey}/comment/{commentId}
+          - GET /task
+          - POST /matter/from-opportunity
+          - POST /case/{businessKey}/link-product-order/{productOrderId}
+        auth:
+          type: bearer_jwt
+          issuer_env: AUTH_KEYCLOAK_ISSUER
+          shared_realm: true
+
+  commercial-system:
+    description: |
+      Marketing/CRM system. Canonical Commercial domain owner.
+      Owns Contact creation/deduplication and Opportunity pipeline progression.
+      Issues CreateMatterFromOpportunity command to ll-task-tracker.
+      May NOT define or transition Matter lifecycle.
+    domain: commercial
+    contract_version: "1.0.0"
+    publishes:
+      events:
+        - topic: product-order-converted-to-opportunity
+          schema: contracts/domain/conversions.yaml#ProductOrderConvertedToOpportunityEvent
+    consumes:
+      ll-task-tracker:
+        api_contract_version: "^1.1.0"
+        endpoints:
+          - POST /matter/from-opportunity
+        auth:
+          type: bearer_jwt
+          issuer_env: AUTH_KEYCLOAK_ISSUER
+          shared_realm: true
+        write_permissions: contracts/domain/write-permissions.yaml#commercial-system
+
+  public-website:
+    description: |
+      Acquisition surface. Captures leads and routes to commercial or commerce intake.
+      Does not write canonical records directly.
+    domain: acquisition
+    consumes:
+      commercial-system:
+        endpoints:
+          - POST /intake/form-submission (commercial intake API)
+      ll-corporate:
+        endpoints:
+          - Commerce checkout flow
+
+compatibility_rules:
+  - additive_changes: allowed_in_minor
+  - breaking_changes: require_major_bump
+  - field_removal: treat_as_breaking
+  - enum_value_removal: treat_as_breaking
+  - enum_value_addition: allowed_in_minor
+  - deprecated_fields_grace_period_days: 30
+
+deployment_order:
+  breaking_change:
+    description: For breaking contract changes, deploy in this order.
+    steps:
+      - step: 1
+        service: ll-task-tracker
+        notes: Deploy with dual-support (old + new contract) or behind feature flag.
+      - step: 2
+        service: ll-corporate
+        notes: Deploy once ll-task-tracker is confirmed stable on new contract.
+  backward_compatible_change:
+    description: For additive changes, no sequencing constraint.
+    steps:
+      - step: 1
+        service: ll-task-tracker
+        notes: Deploy first — new fields are ignored by current consumer.
+      - step: 2
+        service: ll-corporate
+        notes: Deploy when ready to consume new fields.

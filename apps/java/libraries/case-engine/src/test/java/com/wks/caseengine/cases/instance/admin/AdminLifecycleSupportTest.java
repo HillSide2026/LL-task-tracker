@@ -24,7 +24,7 @@ class AdminLifecycleSupportTest {
 	@Test
 	void shouldFlagInvalidMaintenanceResumeTargetAsMalformed() {
 		CaseInstance caseInstance = CaseInstance.builder().caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID)
-				.adminState(AdminState.MAINTENANCE_CLIENT_WAIT.getCode()).stage("Open").nextActionSummary("Await response")
+				.adminState(AdminState.MAINTENANCE_CLIENT_WAIT.getCode()).stage("Maintenance").nextActionSummary("Await response")
 				.nextActionOwnerType(NextActionOwnerType.CLIENT.getCode()).waitingSince("2026-04-01")
 				.expectedResponseAt("2026-04-15").resumeToState(AdminState.READY_TO_OPEN.getCode()).build();
 
@@ -39,7 +39,7 @@ class AdminLifecycleSupportTest {
 	@Test
 	void shouldFlagMissingExternalPartyRefForExternalWait() {
 		CaseInstance caseInstance = CaseInstance.builder().caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID)
-				.adminState(AdminState.WAITING_ON_EXTERNAL.getCode()).stage("Open").nextActionSummary("Await external response")
+				.adminState(AdminState.WAITING_ON_EXTERNAL.getCode()).stage("Maintenance").nextActionSummary("Await external response")
 				.nextActionOwnerType(NextActionOwnerType.EXTERNAL.getCode()).waitingSince("2026-04-01")
 				.expectedResponseAt("2026-04-15").resumeToState(AdminState.ACTIVE.getCode()).build();
 

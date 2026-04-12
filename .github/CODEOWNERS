@@ -1,0 +1,13 @@
+# CODEOWNERS — LL-task-tracker
+#
+# Contract files require approval from a maintainer of both repos before merge.
+# This prevents either side from changing shared contracts unilaterally.
+
+# Contracts directory — requires both-repo approval
+/contracts/                 @HillSide2026
+
+# OPA policy — authorization rules are a contract boundary
+/opa/                       @HillSide2026
+
+# Deployment config — affects runtime integration assumptions
+/deployments/               @HillSide2026

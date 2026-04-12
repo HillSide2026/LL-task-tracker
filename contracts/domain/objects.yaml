@@ -1,0 +1,369 @@
+# Bounded Object Schemas
+# Canonical OpenAPI schema definitions for all bounded domain objects.
+#
+# These schemas are the source of truth for object shapes across systems.
+# TypeScript types in ll-corporate must mirror these exactly.
+#
+# Domain ownership is declared in x-domain on each schema.
+# Write permissions are declared in contracts/domain/write-permissions.yaml.
+
+openapi: "3.0.3"
+info:
+  title: Domain Object Schemas
+  version: "1.0.0"
+  description: Bounded object schemas for Contact, Opportunity, Matter, and ProductOrder.
+
+components:
+  schemas:
+
+    # ── Commercial domain ──────────────────────────────────────────────────────
+
+    Contact:
+      type: object
+      description: |
+        Commercial identity record for a person or entity in pre-engagement or commercial context.
+        Domain owner: marketing/commercial system
+        Creates a Matter: No
+        Has lifecycle semantics: No
+      x-domain: commercial
+      required:
+        - contactId
+      properties:
+        contactId:
+          type: string
+          description: Stable unique ID in the commercial system.
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        companyName:
+          type: string
+        sourceChannel:
+          type: string
+          description: Acquisition channel (e.g. website, referral, organic).
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        linkedOpportunityIds:
+          type: array
+          items:
+            type: string
+          description: IDs of Opportunities associated with this Contact.
+        linkedMatterIds:
+          type: array
+          items:
+            type: string
+          description: Matter IDs (businessKey) associated with this Contact through converted Opportunities.
+          readOnly: true
+
+    Opportunity:
+      type: object
+      description: |
+        A commercial engagement opportunity moving through a commercial pipeline.
+        Domain owner: marketing/commercial system
+        Creates a Matter: Only through CreateMatterFromOpportunity command
+        Has lifecycle semantics: opportunityPipelineStage only (commercial pipeline, not Matter lifecycle)
+
+        An Opportunity is not a Matter.
+        The commercial system may not drive Matter lifecycle transitions.
+      x-domain: commercial
+      required:
+        - opportunityId
+        - primaryContactId
+        - opportunityPipelineStage
+        - opportunityStatus
+      properties:
+        opportunityId:
+          type: string
+          description: Stable unique ID in the commercial system.
+        primaryContactId:
+          type: string
+          description: Reference to the primary Contact for this Opportunity.
+        opportunityPipelineStage:
+          type: string
+          description: |
+            Commercial pipeline stage. MUST be one of the values in OpportunityPipelineStage vocabulary.
+            This is pipeline language ONLY — not Matter lifecycle.
+          enum:
+            - Intake
+            - Onboarding
+        opportunityStatus:
+          type: string
+          enum:
+            - Open
+            - Converted
+            - Closed Won
+            - Closed Lost
+        matterType:
+          type: string
+          description: |
+            Anticipated Matter type if this Opportunity converts.
+            For routing/qualification purposes only — does NOT create a Matter.
+            The actual matterType is set by the Matter domain at Matter creation.
+        originProductOrderId:
+          type: string
+          nullable: true
+          description: |
+            Set if this Opportunity was sourced from a ProductOrder via
+            CreateOpportunityFromProductOrder. Null otherwise.
+        matterId:
+          type: string
+          nullable: true
+          description: |
+            Set after successful CreateMatterFromOpportunity conversion.
+            References the Matter's businessKey in ll-task-tracker.
+            Null until conversion occurs.
+            READONLY after conversion — only the Matter domain may modify the Matter.
+        qualificationNotes:
+          type: string
+        assignedTo:
+          type: string
+          description: Commercial team member assigned to this Opportunity.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        convertedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp of Matter creation, set on OpportunityConvertedToMatter event.
+          readOnly: true
+
+    # ── Matter domain (extensions to CaseInstance) ────────────────────────────
+
+    MatterCreationRequest:
+      type: object
+      description: |
+        Request body for creating a Matter from an Opportunity.
+        Used in POST /matter/from-opportunity.
+        The Matter domain validates this and creates the canonical Matter record.
+      required:
+        - opportunityId
+        - primaryContactId
+        - idempotencyKey
+      properties:
+        opportunityId:
+          type: string
+          description: The Opportunity this Matter is being created from.
+        primaryContactId:
+          type: string
+          description: The primary Contact associated with this Opportunity.
+        idempotencyKey:
+          type: string
+          description: |
+            Caller-supplied idempotency key. Duplicate requests with the same key
+            return the existing Matter rather than creating a new one.
+        matterType:
+          type: string
+          nullable: true
+          description: |
+            Optional Matter type classification. If not provided, the Matter domain
+            will use a default or require it to be set after creation.
+        requestedBy:
+          type: string
+          description: User ID or service identity requesting the creation.
+        notes:
+          type: string
+          description: Optional intake notes to carry into the Matter.
+
+    MatterCreationResult:
+      type: object
+      description: |
+        Response from POST /matter/from-opportunity.
+        Provides the Matter identity and initial state for backlink recording.
+      required:
+        - matterId
+        - matterLifecycleStage
+        - matterState
+        - originOpportunityId
+      properties:
+        matterId:
+          type: string
+          description: The Matter's businessKey. Use this as the canonical identifier for the Matter.
+        matterType:
+          type: string
+          nullable: true
+        matterLifecycleStage:
+          type: string
+          description: Will always be "Onboarding" for newly created Matters.
+          enum:
+            - Onboarding
+        matterState:
+          type: string
+          description: Will always be "Pending" for newly created Matters.
+          enum:
+            - Pending
+        originOpportunityId:
+          type: string
+          description: Echoed back to confirm which Opportunity this Matter was created from.
+        originContactId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        idempotent:
+          type: boolean
+          description: True if this request matched an existing idempotency key and returned an existing Matter.
+
+    # ── Commerce domain ────────────────────────────────────────────────────────
+
+    Product:
+      type: object
+      description: |
+        A purchasable product in the commerce catalog.
+        Domain owner: commerce backend / ll-corporate serving surface
+      x-domain: commerce
+      required:
+        - productId
+        - productType
+        - name
+      properties:
+        productId:
+          type: string
+        productType:
+          type: string
+          enum:
+            - Document
+            - Consultation
+            - Template
+            - Service
+            - Other
+        name:
+          type: string
+        description:
+          type: string
+        priceAmount:
+          type: number
+          format: double
+        priceCurrency:
+          type: string
+          example: CAD
+        active:
+          type: boolean
+
+    ProductOrder:
+      type: object
+      description: |
+        A standalone product purchase made through the portal.
+        Domain owner: commerce backend / ll-corporate serving surface
+
+        A ProductOrder is NOT a Matter.
+        A ProductOrder does NOT create a Matter by default.
+        productOrderStatus MUST NOT reuse Matter lifecycle or Matter state terminology.
+        A ProductOrder may be linked to a Matter only through an explicit approved path.
+      x-domain: commerce
+      required:
+        - productOrderId
+        - productId
+        - productType
+        - productOrderStatus
+        - paymentStatus
+        - fulfillmentStatus
+        - purchasedAt
+      properties:
+        productOrderId:
+          type: string
+          description: Stable unique ID in the commerce system.
+        productId:
+          type: string
+        productType:
+          type: string
+          enum:
+            - Document
+            - Consultation
+            - Template
+            - Service
+            - Other
+        productName:
+          type: string
+        productOrderStatus:
+          type: string
+          description: |
+            Commerce-only order status. MUST NOT reuse Matter lifecycle or Matter state values.
+          enum:
+            - Created
+            - Pending Payment
+            - Paid
+            - Fulfillment Pending
+            - Fulfilled
+            - Cancelled
+            - Refunded
+        paymentStatus:
+          type: string
+          enum:
+            - Unpaid
+            - Pending
+            - Paid
+            - Failed
+            - Refunded
+            - Disputed
+        fulfillmentStatus:
+          type: string
+          enum:
+            - Pending
+            - In Progress
+            - Fulfilled
+            - Failed
+        customerContactId:
+          type: string
+          description: Reference to the commercial Contact identity of the purchaser.
+        portalUserId:
+          type: string
+          description: Portal user identity (Keycloak subject). May differ from customerContactId.
+        priceAmount:
+          type: number
+          format: double
+        priceCurrency:
+          type: string
+          example: CAD
+        sourceChannel:
+          type: string
+          description: Acquisition channel for this order.
+        purchasedAt:
+          type: string
+          format: date-time
+        accessGrantedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When fulfillment/access was granted to the purchaser.
+        # Cross-domain linkage fields (all nullable — set only through explicit approved paths)
+        originOpportunityId:
+          type: string
+          nullable: true
+          description: |
+            Set only if this ProductOrder was sourced from an Opportunity.
+            Null for direct purchases.
+        convertedOpportunityId:
+          type: string
+          nullable: true
+          description: |
+            Set only after CreateOpportunityFromProductOrder command succeeds.
+            Null by default. A ProductOrder does not automatically create an Opportunity.
+          readOnly: true
+        convertedMatterId:
+          type: string
+          nullable: true
+          description: |
+            Set only where an explicit approved path created or linked a Matter.
+            A ProductOrder does not create a Matter by default.
+            Setting this requires a ProductOrderLinkedToMatter event.
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time

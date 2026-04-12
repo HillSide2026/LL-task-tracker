@@ -1,0 +1,201 @@
+# Domain Vocabulary
+# Authoritative definitions of all domain-qualified enums and status types.
+#
+# Rules:
+# - Never use bare shared labels (onboarding, status, stage) in cross-system code or events.
+# - Always qualify with the domain prefix shown in the fieldName column.
+# - These definitions are source of truth; downstream types must mirror them exactly.
+#
+# Format: OpenAPI 3.0 Schema Components (may be $ref'd into openapi specs)
+
+openapi: "3.0.3"
+info:
+  title: Domain Vocabulary
+  version: "1.0.0"
+  description: |
+    Canonical domain-qualified enum definitions for the Levine Law platform.
+    Import via $ref or mirror exactly in TypeScript/Zod contracts.
+
+components:
+  schemas:
+
+    # ── Commercial domain ──────────────────────────────────────────────────────
+
+    OpportunityPipelineStage:
+      type: string
+      description: |
+        Commercial-only pipeline progression stage for an Opportunity.
+        fieldName: opportunityPipelineStage
+        Domain owner: marketing/commercial system
+        NOT a Matter lifecycle stage. NOT a ProductOrder status.
+      enum:
+        - Intake
+        - Onboarding
+      x-domain: commercial
+      x-field-name: opportunityPipelineStage
+
+    OpportunityStatus:
+      type: string
+      description: |
+        Operational status of an Opportunity record.
+        fieldName: opportunityStatus
+        Domain owner: marketing/commercial system
+      enum:
+        - Open
+        - Converted
+        - Closed Won
+        - Closed Lost
+      x-domain: commercial
+      x-field-name: opportunityStatus
+
+    # ── Matter domain ──────────────────────────────────────────────────────────
+
+    MatterLifecycleStage:
+      type: string
+      description: |
+        Canonical operational lifecycle stage of a Matter.
+        fieldName: matterLifecycleStage
+        Domain owner: ll-task-tracker (canonical Matter authority)
+
+        Implementation mapping:
+          CaseInstance.stage (AdminLifecycleStage) → matterLifecycleStage
+          "Open" in AdminLifecycleStage → "Maintenance" in spec vocabulary (rename pending)
+
+        NOT an Opportunity pipeline stage. NOT a ProductOrder status.
+      enum:
+        - Onboarding
+        - Opening
+        - Maintenance
+        - Closing
+        - Archived
+      x-domain: matter
+      x-field-name: matterLifecycleStage
+      x-impl-mapping: "CaseInstance.stage"
+
+    MatterState:
+      type: string
+      description: |
+        Canonical cross-domain Matter status. Projected from the internal adminState
+        for consumption by non-Matter-domain systems.
+        fieldName: matterState
+        Domain owner: ll-task-tracker
+
+        For newly created Matter: Pending
+        Only the Matter domain may define additional states and their semantics.
+
+        Implementation mapping:
+          CaseInstance.adminState → internal operational granularity (authoritative)
+          MatterState → canonical cross-domain projection (simplified)
+      enum:
+        - Pending
+        - Active
+        - Closed
+        - Archived
+      x-domain: matter
+      x-field-name: matterState
+      x-impl-mapping: "derived from CaseInstance.adminState + CaseInstance.status"
+
+    MatterType:
+      type: string
+      description: |
+        Classification of the type of engagement represented by a Matter.
+        fieldName: matterType
+        Domain owner: ll-task-tracker
+
+        Rules:
+        - Applies only AFTER Matter creation.
+        - Does not define lifecycle stage or Matter state/status.
+        - PRODUCT is explicitly NOT a valid matterType.
+        - Standalone product purchases remain in Commerce domain.
+        - Do not overload matterType with orthogonal axes (billing model, referral source, etc.).
+
+        Enumerated values are defined by firm policy and may be extended by the Matter domain.
+        This schema intentionally does not enumerate all values — the Matter domain owns additions.
+      type: string
+      pattern: "^[A-Z_]+$"
+      x-domain: matter
+      x-field-name: matterType
+      x-explicitly-excluded: ["PRODUCT"]
+
+    # ── Commerce domain ────────────────────────────────────────────────────────
+
+    ProductOrderStatus:
+      type: string
+      description: |
+        Commerce-only order progression status for a ProductOrder.
+        fieldName: productOrderStatus
+        Domain owner: commerce backend / ll-corporate serving surface
+
+        NOT a Matter lifecycle stage. NOT a Matter state.
+        NOT an Opportunity pipeline stage.
+      enum:
+        - Created
+        - Pending Payment
+        - Paid
+        - Fulfillment Pending
+        - Fulfilled
+        - Cancelled
+        - Refunded
+      x-domain: commerce
+      x-field-name: productOrderStatus
+
+    PaymentStatus:
+      type: string
+      description: |
+        Payment processing status for a ProductOrder.
+        fieldName: paymentStatus
+        Domain owner: commerce backend
+      enum:
+        - Unpaid
+        - Pending
+        - Paid
+        - Failed
+        - Refunded
+        - Disputed
+      x-domain: commerce
+      x-field-name: paymentStatus
+
+    FulfillmentStatus:
+      type: string
+      description: |
+        Fulfillment/delivery status for a ProductOrder.
+        fieldName: fulfillmentStatus
+        Domain owner: commerce backend
+      enum:
+        - Pending
+        - In Progress
+        - Fulfilled
+        - Failed
+      x-domain: commerce
+      x-field-name: fulfillmentStatus
+
+    ProductType:
+      type: string
+      description: |
+        Classification of the product purchased in a ProductOrder.
+        fieldName: productType
+        Domain owner: commerce backend
+      enum:
+        - Document
+        - Consultation
+        - Template
+        - Service
+        - Other
+      x-domain: commerce
+      x-field-name: productType
+
+    # ── Party roles ────────────────────────────────────────────────────────────
+
+    PartyRole:
+      type: string
+      description: |
+        Business role held by a party in the system.
+        A single person may hold multiple roles simultaneously.
+        These roles are NOT automatically interchangeable.
+        fieldName: role (context-specific)
+      enum:
+        - Contact
+        - Customer
+        - Client
+      x-domain: cross-domain
+      x-note: "Contact=commercial identity; Customer=has completed purchase; Client=has active Matter"

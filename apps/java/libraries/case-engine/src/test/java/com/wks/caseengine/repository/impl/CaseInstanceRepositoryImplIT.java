@@ -150,7 +150,7 @@ public class CaseInstanceRepositoryImplIT {
 		items.add(new CaseInstance("634e8b5aee448937ec2a31cc", "63618", "1", "Stage 1", "CLOSED_CASE_STATUS"));
 		items.add(new CaseInstance("634e8cb8ee448937ec2a32ce", "25003", "1", "Review", "CLOSED_CASE_STATUS"));
 		items.add(CaseInstance.builder()._id("734e8cb8ee448937ec2a32ce").businessKey("MATTER-100")
-				.caseDefinitionId("matter-admin-opening-control").stage("Open").status("WIP_CASE_STATUS")
+				.caseDefinitionId("matter-admin-opening-control").stage("Maintenance").status("WIP_CASE_STATUS")
 				.adminState("Maintenance Lawyer Review").adminHealth("Red")
 				.healthReasonCodes(List.of("LAWYER_RESPONSE_STALE")).malformedCase(false).adminOwnerId("admin-1")
 				.adminOwnerName("Admin Owner").responsibleLawyerId("lawyer-sub-1")

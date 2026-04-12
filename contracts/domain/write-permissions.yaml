@@ -1,0 +1,148 @@
+# Write Permission Matrix
+# Machine-readable declaration of what each system is allowed to write.
+#
+# enforcement_mechanism options:
+#   - api_boundary: enforced by API validation/authorization in the owning system
+#   - schema_constraint: enforced by schema validation (required field, type check)
+#   - opa_policy: enforced by OPA authorization rules
+#   - convention: not mechanically enforced; maintained by code review and CODEOWNERS
+#
+# This matrix is referenced by CI and audits. Do not introduce cross-domain writes
+# outside this matrix without updating it and going through the contract change process.
+
+schema_version: "1"
+
+systems:
+  ll-task-tracker:
+    description: Matter domain canonical owner
+    may_write:
+      - object: Matter (CaseInstance)
+        fields: all
+        enforcement_mechanism: api_boundary + opa_policy
+        note: Canonical owner. All Matter writes go through case engine endpoints.
+      - object: Matter.originOpportunityId
+        fields: [originOpportunityId]
+        enforcement_mechanism: api_boundary
+        note: Written at Matter creation from CreateMatterFromOpportunity command.
+      - object: Matter.originContactId
+        fields: [originContactId]
+        enforcement_mechanism: api_boundary
+        note: Written at Matter creation.
+      - object: Matter.originProductOrderId
+        fields: [originProductOrderId]
+        enforcement_mechanism: api_boundary
+        note: Written only via LinkProductOrderToMatter command.
+      - object: Matter.matterType
+        fields: [matterType]
+        enforcement_mechanism: api_boundary + opa_policy
+        note: Set at creation or by authorized Matter-domain users only.
+    may_not_write:
+      - object: Opportunity (commercial system)
+        note: May emit OpportunityConvertedToMatterEvent; commercial system records matterId.
+      - object: ProductOrder.productOrderStatus
+        note: Commerce domain owns this field.
+      - object: Contact (commercial system)
+        note: Commercial domain owns Contact deduplication and identity.
+
+  commercial-system:
+    description: Commercial domain canonical owner (marketing/CRM system)
+    may_write:
+      - object: Contact
+        fields: all
+        enforcement_mechanism: commercial system API boundary
+        note: Canonical owner of Contact creation and deduplication.
+      - object: Opportunity
+        fields: all
+        enforcement_mechanism: commercial system API boundary
+        note: Canonical owner. opportunityPipelineStage and opportunityStatus are commercial-only.
+      - object: Opportunity.matterId
+        fields: [matterId, convertedAt]
+        enforcement_mechanism: api_boundary + event-driven backlink
+        note: Updated when OpportunityConvertedToMatterEvent is received. Not a write to Matter.
+      - object: Opportunity.originProductOrderId
+        fields: [originProductOrderId]
+        enforcement_mechanism: api_boundary
+        note: Set at Opportunity creation from CreateOpportunityFromProductOrder.
+    may_not_write:
+      - object: Matter.matterLifecycleStage
+        enforcement_mechanism: api_boundary (ll-task-tracker rejects writes from non-Matter actors)
+        note: |
+          CRITICAL. Commercial system may reference matterLifecycleStage for display only.
+          It may not define, modify, or mirror Matter lifecycle transitions.
+      - object: Matter.adminState
+        enforcement_mechanism: api_boundary
+        note: Internal operational field. Commercial system has read-only view via projection.
+      - object: Matter.matterType
+        note: May suggest matterType during Opportunity qualification; Matter domain decides final value.
+      - object: ProductOrder
+        note: Commerce domain owns ProductOrder records.
+
+  ll-corporate-commerce:
+    description: Commerce domain serving surface (ll-corporate + commerce backend)
+    may_write:
+      - object: ProductOrder
+        fields: all
+        enforcement_mechanism: commerce API boundary
+        note: Canonical owner. productOrderStatus transitions owned exclusively by commerce system.
+      - object: ProductOrder.paymentStatus
+        enforcement_mechanism: commerce API boundary
+        note: Payment processor integration updates this field.
+      - object: ProductOrder.fulfillmentStatus
+        enforcement_mechanism: commerce API boundary
+        note: Fulfillment service updates this field.
+      - object: ProductOrder.convertedOpportunityId
+        fields: [convertedOpportunityId]
+        enforcement_mechanism: event-driven backlink
+        note: Updated when ProductOrderConvertedToOpportunityEvent is received.
+      - object: ProductOrder.convertedMatterId
+        fields: [convertedMatterId]
+        enforcement_mechanism: event-driven backlink
+        note: Updated when ProductOrderLinkedToMatterEvent is received.
+    may_not_write:
+      - object: Matter.matterLifecycleStage
+        enforcement_mechanism: api_boundary (ll-task-tracker rejects unauthorized writes)
+        note: Commerce domain has no Matter lifecycle authority.
+      - object: Matter.adminState
+        enforcement_mechanism: api_boundary
+      - object: Opportunity.opportunityPipelineStage
+        note: Commercial domain owns Opportunity pipeline progression.
+      - object: implicit_matter_creation_from_purchase
+        note: |
+          CRITICAL. A product purchase MUST NOT implicitly create a Matter.
+          Any path that does this is a prohibited implementation.
+
+  public-website:
+    description: Acquisition surface
+    may_write:
+      - object: form_submission
+        fields: [name, email, phone, messageBody, sourceUrl, ctaLabel, submittedAt]
+        enforcement_mechanism: api_boundary (intake API endpoint)
+        note: Transient only. Must be routed into commercial or commerce intake paths.
+    may_not_write:
+      - object: Contact
+        note: Commercial system creates Contact from form submission. Website does not write Contact directly.
+      - object: Opportunity
+        note: Commercial system creates Opportunity. Website routes to intake flow only.
+      - object: Matter
+        note: Website has no Matter write access.
+      - object: ProductOrder
+        note: ProductOrder creation goes through commerce checkout flow.
+
+idempotency_rules:
+  - command: CreateMatterFromOpportunity
+    key: idempotencyKey (caller-supplied, recommend: opportunityId)
+    behavior: return existing Matter if key already seen
+    duplicate_check: opportunityId must not already have a matterId unless multi-matter is approved
+  - command: CreateOpportunityFromProductOrder
+    key: idempotencyKey (caller-supplied, recommend: productOrderId)
+    behavior: return existing Opportunity if key already seen
+  - command: LinkProductOrderToMatter
+    key: idempotencyKey (caller-supplied, recommend: productOrderId + matterId)
+    behavior: no-op if link already exists
+
+backlink_failure_handling:
+  rule: |
+    Canonical object creation in the owning domain ALWAYS completes first.
+    Backlink updates to other domains are secondary and retryable.
+    A backlink failure must NEVER cause a duplicate canonical object to be created.
+    Log all backlink failures for manual reconciliation if retry exhausted.
