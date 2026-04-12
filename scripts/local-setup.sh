@@ -19,6 +19,7 @@ add_host() {
 }
 
 add_host "matters.localhost"
+add_host "auth.localhost"
 add_host "corporate.localhost"
 
 echo ""
@@ -71,5 +72,6 @@ echo "     pnpm dev"
 echo ""
 echo "  Canonical local URLs:"
 echo "    http://matters.localhost      — matter portal"
+echo "    http://auth.localhost         — Keycloak admin UI + OIDC"
 echo "    http://corporate.localhost    — corporate portal"
 echo "    http://localhost:8888         — Traefik dashboard"

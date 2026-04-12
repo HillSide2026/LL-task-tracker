@@ -4,6 +4,7 @@
 #
 # Canonical local URLs this overlay provides:
 #   http://matters.localhost      — React matter portal (staff-facing)
+#   http://auth.localhost         — Keycloak auth server (admin UI + OIDC endpoints)
 #   http://corporate.localhost    — ll-corporate Next.js portal (client-facing, host process)
 #   http://localhost:8888         — Traefik dashboard
 #
@@ -19,6 +20,7 @@
 # PREREQUISITES
 # /etc/hosts must contain (run scripts/local-setup.sh to add idempotently):
 #   127.0.0.1 matters.localhost
+#   127.0.0.1 auth.localhost
 #   127.0.0.1 corporate.localhost
 #
 # host.docker.internal (used in configs/traefik-local/ll-corporate.yaml to reach
@@ -72,18 +74,17 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./configs/traefik-local:/traefik:ro
 
-  # ── Keycloak: serve at /auth so browser URL and internal service URL align ────
-  # Override replaces the base `start-dev` command to add --http-relative-path.
-  # KEYCLOAK_URL in .env.local must be http://keycloak:8080/auth to match.
+  # ── Keycloak: serve at auth.localhost (dedicated hostname, no path prefix) ────
+  # Runs as start-dev (same as base). KEYCLOAK_URL stays http://keycloak:8080
+  # for internal service-to-service calls (no change from .env-sample).
+  # Browser and ll-corporate use http://auth.localhost via Traefik.
   keycloak:
     command:
       - start-dev
-      - --http-relative-path=/auth
     labels:
       - traefik.enable=true
-      - traefik.http.routers.keycloak.rule=Host(`matters.localhost`) && PathPrefix(`/auth`)
+      - traefik.http.routers.keycloak.rule=Host(`auth.localhost`)
       - traefik.http.routers.keycloak.entrypoints=web
-      - traefik.http.routers.keycloak.priority=100
       - traefik.http.services.keycloak.loadbalancer.server.port=8080
 
   # ── Case API ──────────────────────────────────────────────────────────────────
