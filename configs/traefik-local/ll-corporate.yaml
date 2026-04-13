@@ -1,27 +1,42 @@
 # configs/traefik-local/ll-corporate.yaml
 #
-# Traefik file-provider route for ll-corporate.
+# Traefik file-provider routes for ll-corporate.
 #
-# Routes http://corporate.localhost to the ll-corporate Next.js dev server
-# running on the host machine (pnpm dev, port 3000).
+# ll-corporate (next.config.ts) sets basePath="/corporate". All Next.js routes
+# are under /corporate. Hitting corporate.localhost/ (no prefix) returns a
+# Next.js 404. The redirect router below catches the bare root and sends the
+# browser to /corporate so the app entry point is unambiguous.
 #
-# host.docker.internal is a Docker Desktop for Mac / Docker Desktop for Windows
-# reserved hostname that resolves to the host machine from inside a container.
-# It is NOT available in Linux Docker Engine without explicit configuration.
-# Linux alternative: replace host.docker.internal with the host bridge IP
-# (typically 172.17.0.1), or add the following to the traefik service in
-# docker-compose.local.yaml:
+# Two routers:
+#   ll-corporate-redirect  — redirects corporate.localhost  → corporate.localhost/corporate
+#   ll-corporate           — proxies  corporate.localhost/* → host:3000
 #
-#   extra_hosts:
-#     - "host.docker.internal:host-gateway"
+# host.docker.internal is Docker Desktop for Mac/Windows only.
+# Linux: replace with host bridge IP or add extra_hosts to traefik service.
 
 http:
   routers:
+    # Redirect bare root to the basePath entry point
+    ll-corporate-redirect:
+      rule: "Host(`corporate.localhost`) && Path(`/`)"
+      entrypoints:
+        - web
+      middlewares:
+        - redirect-to-corporate
+      service: ll-corporate
+
     ll-corporate:
       rule: "Host(`corporate.localhost`)"
       entrypoints:
         - web
       service: ll-corporate
+
+  middlewares:
+    redirect-to-corporate:
+      redirectRegex:
+        regex: "^http://corporate\\.localhost/?$"
+        replacement: "http://corporate.localhost/corporate"
+        permanent: false
 
   services:
     ll-corporate:
