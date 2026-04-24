@@ -4,9 +4,24 @@ Levine LLP's matter platform for internal matter opening, lawyer review, client/
 
 This repository has been re-homed as `LL-task-tracker`. It currently combines a Levine LLP matter-management layer with an upstream-derived case management and workflow platform. The visible product surface is the Levine LLP matter portal; some lower-level service names, Java packages, environment variable names, and policy paths still retain upstream WKS identifiers while the codebase is being separated safely.
 
+## System Role (Levine LLP)
+
+`LL-task-tracker` is Levine LLP's internal task-management and operational
+system of record. It owns workflow state, task ownership, and operational matter
+tracking for the firm.
+
+Production deployment:
+
+- `https://firm.levinellp.ca`
+
+The `ll-corporate` app may surface client-facing portal views through
+`https://levinellp.ca`, but workflow state, task ownership, and operational task
+records remain owned here. `NDA-Esq` remains a separate NDA Generator mounted at
+`https://levinellp.ca/nda`.
+
 ## Current Product Surface
 
-- Matter portal: `https://matters.levinellp.ca`
+- Internal operations portal: `https://firm.levinellp.ca`
 - Deployment entrypoint: `deployments/levinellp`
 - Primary UI app: `apps/react/case-portal`
 - Primary backend API: `apps/java/services/case-engine-rest-api`
