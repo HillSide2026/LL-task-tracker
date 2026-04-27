@@ -22,6 +22,15 @@ class AdminLifecycleSupportTest {
 	}
 
 	@Test
+	void shouldMapStagesUsingOpenedCompletionRule() {
+		assertEquals("Opening", AdminLifecycleSupport.expectedStageForState(AdminState.OPENED.getCode()));
+		assertEquals("Maintenance", AdminLifecycleSupport.expectedStageForState(AdminState.ACTIVE.getCode()));
+		assertEquals("Closing", AdminLifecycleSupport.expectedStageForState(AdminState.CLOSING_REVIEW.getCode()));
+		assertEquals("Closing", AdminLifecycleSupport.expectedStageForState(AdminState.CLOSED.getCode()));
+		assertEquals("Archived", AdminLifecycleSupport.expectedStageForState(AdminState.ARCHIVED.getCode()));
+	}
+
+	@Test
 	void shouldFlagInvalidMaintenanceResumeTargetAsMalformed() {
 		CaseInstance caseInstance = CaseInstance.builder().caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID)
 				.adminState(AdminState.MAINTENANCE_CLIENT_WAIT.getCode()).stage("Maintenance").nextActionSummary("Await response")

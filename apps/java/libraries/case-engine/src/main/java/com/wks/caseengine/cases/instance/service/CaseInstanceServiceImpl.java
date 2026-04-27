@@ -140,19 +140,25 @@ public class CaseInstanceServiceImpl implements CaseInstanceService {
 		if (AdminLifecycleSupport.isAdminLifecycleCase(caseInstance)) {
 			String previousState = caseInstance.getAdminState();
 			String previousResumeState = caseInstance.getResumeToState();
+			String previousStage = caseInstance.getStage();
+			String previousStatus = caseInstance.getStatus() != null ? caseInstance.getStatus().getCode() : null;
+			String previousQueueId = caseInstance.getQueueId();
 			String previousHealth = caseInstance.getAdminHealth();
 			String previousStaleSince = caseInstance.getStaleSince();
 			Boolean previousMalformed = caseInstance.getMalformedCase();
 			var previousReasons = caseInstance.getHealthReasonCodes() != null ? List.copyOf(caseInstance.getHealthReasonCodes()) : List.<String>of();
 
-			boolean normalized = AdminLifecycleSupport.normalizeLegacyState(caseInstance);
+			boolean normalized = AdminLifecycleSupport.synchronizeDerivedFields(caseInstance);
 			AdminLifecycleSupport.applyEvaluation(caseInstance);
 			boolean evaluationChanged = !equalsNullable(previousHealth, caseInstance.getAdminHealth())
 					|| !equalsNullable(previousStaleSince, caseInstance.getStaleSince())
 					|| !equalsNullable(previousMalformed, caseInstance.getMalformedCase())
 					|| !previousReasons.equals(caseInstance.getHealthReasonCodes())
 					|| !equalsNullable(previousState, caseInstance.getAdminState())
-					|| !equalsNullable(previousResumeState, caseInstance.getResumeToState());
+					|| !equalsNullable(previousResumeState, caseInstance.getResumeToState())
+					|| !equalsNullable(previousStage, caseInstance.getStage())
+					|| !equalsNullable(previousStatus, caseInstance.getStatus() != null ? caseInstance.getStatus().getCode() : null)
+					|| !equalsNullable(previousQueueId, caseInstance.getQueueId());
 			if (normalized || evaluationChanged) {
 				try {
 					caseInstanceRepository.update(caseInstance.getBusinessKey(), caseInstance);

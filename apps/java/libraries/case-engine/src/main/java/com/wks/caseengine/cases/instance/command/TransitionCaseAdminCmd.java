@@ -2,7 +2,6 @@ package com.wks.caseengine.cases.instance.command;
 
 import java.util.Objects;
 
-import com.wks.caseengine.cases.definition.CaseStatus;
 import com.wks.caseengine.cases.instance.CaseInstance;
 import com.wks.caseengine.cases.instance.CaseInstanceNotFoundException;
 import com.wks.caseengine.cases.instance.admin.AdminEvent;
@@ -41,7 +40,7 @@ public class TransitionCaseAdminCmd implements Command<CaseInstance> {
 		}
 
 		normalizeTopLevelOwners(caseInstance);
-		AdminLifecycleSupport.normalizeLegacyState(caseInstance);
+		AdminLifecycleSupport.synchronizeDerivedFields(caseInstance);
 		AdminLifecycleAccessSupport.assertCanTransition(caseInstance, transition);
 
 		switch (transition) {
@@ -63,6 +62,9 @@ public class TransitionCaseAdminCmd implements Command<CaseInstance> {
 		case RESUME_FROM_EXTERNAL_WAIT -> resumeMaintenanceWait(commandContext, caseInstance);
 		case LAWYER_REQUEST_CLIENT_FOLLOWUP -> lawyerRequestClientFollowup(commandContext, caseInstance);
 		case LAWYER_REQUEST_EXTERNAL_FOLLOWUP -> lawyerRequestExternalFollowup(commandContext, caseInstance);
+		case START_CLOSING_REVIEW -> startClosingReview(commandContext, caseInstance);
+		case CLOSE_MATTER -> closeMatter(commandContext, caseInstance);
+		case ARCHIVE_MATTER -> archiveMatter(commandContext, caseInstance);
 		default -> throw new AdminLifecycleException("Unsupported admin lifecycle transition");
 		}
 
@@ -311,6 +313,41 @@ public class TransitionCaseAdminCmd implements Command<CaseInstance> {
 		startExternalWait(commandContext, caseInstance, AdminState.MAINTENANCE_LAWYER_REVIEW);
 	}
 
+	private void startClosingReview(CommandContext commandContext, CaseInstance caseInstance) {
+		requireState(caseInstance, AdminState.ACTIVE);
+		moveToState(commandContext, caseInstance, AdminState.CLOSING_REVIEW, request.getQueueId());
+		clearWaiting(caseInstance);
+		applyNextAction(commandContext, caseInstance, NextActionOwnerType.ADMIN,
+				buildOwnerRef(caseInstance.getAdminOwnerId(), caseInstance.getAdminOwnerName()),
+				defaultIfBlank(request.getNextActionSummary(), "Complete final closing review"), request.getNextActionDueAt());
+		caseInstance.addAdminEvent(buildEvent(commandContext, caseInstance, AdminEventType.CLOSING_REVIEW_STARTED,
+				caseInstance.getLastStateChangedAt(), request.getReasonCode(), request.getNote(),
+				AdminState.ACTIVE.getCode(), caseInstance.getAdminState(),
+				AdminLifecycleSupport.expectedStageForState(AdminState.ACTIVE.getCode()), caseInstance.getStage()));
+	}
+
+	private void closeMatter(CommandContext commandContext, CaseInstance caseInstance) {
+		requireState(caseInstance, AdminState.CLOSING_REVIEW);
+		moveToState(commandContext, caseInstance, AdminState.CLOSED, request.getQueueId());
+		clearWaiting(caseInstance);
+		clearNextAction(caseInstance);
+		caseInstance.addAdminEvent(buildEvent(commandContext, caseInstance, AdminEventType.CASE_CLOSED,
+				caseInstance.getLastStateChangedAt(), request.getReasonCode(), request.getNote(),
+				AdminState.CLOSING_REVIEW.getCode(), caseInstance.getAdminState(),
+				AdminLifecycleSupport.expectedStageForState(AdminState.CLOSING_REVIEW.getCode()), caseInstance.getStage()));
+	}
+
+	private void archiveMatter(CommandContext commandContext, CaseInstance caseInstance) {
+		requireState(caseInstance, AdminState.CLOSED);
+		moveToState(commandContext, caseInstance, AdminState.ARCHIVED, request.getQueueId());
+		clearWaiting(caseInstance);
+		clearNextAction(caseInstance);
+		caseInstance.addAdminEvent(buildEvent(commandContext, caseInstance, AdminEventType.CASE_ARCHIVED,
+				caseInstance.getLastStateChangedAt(), request.getReasonCode(), request.getNote(),
+				AdminState.CLOSED.getCode(), caseInstance.getAdminState(),
+				AdminLifecycleSupport.expectedStageForState(AdminState.CLOSED.getCode()), caseInstance.getStage()));
+	}
+
 	private void startWait(CommandContext commandContext, CaseInstance caseInstance, AdminState waitState,
 			AdminState resumeState, NextActionOwnerType nextActionOwnerType, String defaultNextActionSummary, String queueIdOverride) {
 		moveToState(commandContext, caseInstance, waitState, queueIdOverride);
@@ -443,7 +480,7 @@ public class TransitionCaseAdminCmd implements Command<CaseInstance> {
 
 		caseInstance.setAdminState(targetState.getCode());
 		caseInstance.setStage(AdminLifecycleSupport.expectedStageForState(targetState.getCode()));
-		caseInstance.setStatus(CaseStatus.WIP_CASE_STATUS);
+		caseInstance.setStatus(AdminLifecycleSupport.expectedStatusForState(targetState.getCode()));
 		caseInstance.setQueueId(defaultIfBlank(queueIdOverride, AdminLifecycleSupport.defaultQueueForState(targetState.getCode())));
 		caseInstance.setLastStateChangedAt(timestamp);
 
@@ -474,6 +511,13 @@ public class TransitionCaseAdminCmd implements Command<CaseInstance> {
 		caseInstance.setWaitingSince(null);
 		caseInstance.setExpectedResponseAt(null);
 		caseInstance.setResumeToState(null);
+	}
+
+	private void clearNextAction(CaseInstance caseInstance) {
+		caseInstance.setNextActionOwnerType(null);
+		caseInstance.setNextActionOwnerRef(null);
+		caseInstance.setNextActionSummary(null);
+		caseInstance.setNextActionDueAt(null);
 	}
 
 	private String buildOwnerRef(String ownerId, String ownerName) {

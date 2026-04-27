@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.wks.caseengine.cases.definition.CaseStatus;
 import com.wks.caseengine.cases.instance.CaseAttribute;
 import com.wks.caseengine.cases.instance.CaseInstance;
 
@@ -31,6 +32,9 @@ public final class AdminLifecycleSupport {
 	public static final String QUEUE_MAINTENANCE_LAWYER_REVIEW = "matter-admin-maintenance-lawyer-review";
 	public static final String QUEUE_MAINTENANCE_CLIENT_WAITING = "matter-admin-maintenance-client-waiting";
 	public static final String QUEUE_EXTERNAL_WAITING = "matter-admin-external-waiting";
+	public static final String QUEUE_CLOSING_REVIEW = "matter-admin-closing-review";
+	public static final String QUEUE_CLOSED = "matter-admin-closed";
+	public static final String QUEUE_ARCHIVED = "matter-admin-archived";
 
 	private static final DateTimeFormatter ISO_DATE = DateTimeFormatter.ISO_LOCAL_DATE;
 	private static final DateTimeFormatter ISO_DATE_TIME = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
@@ -54,10 +58,23 @@ public final class AdminLifecycleSupport {
 
 		return switch (state) {
 		case INTAKE_REVIEW, AWAITING_ENGAGEMENT -> AdminLifecycleStage.ONBOARDING.getCode();
-		case READY_TO_OPEN, READY_FOR_LAWYER, WAITING_ON_CLIENT -> AdminLifecycleStage.OPENING.getCode();
-		case OPENED, ACTIVE, MAINTENANCE_LAWYER_REVIEW, MAINTENANCE_CLIENT_WAIT, WAITING_ON_EXTERNAL -> AdminLifecycleStage.MAINTENANCE.getCode();
+		case READY_TO_OPEN, READY_FOR_LAWYER, WAITING_ON_CLIENT, OPENED -> AdminLifecycleStage.OPENING.getCode();
+		case ACTIVE, MAINTENANCE_LAWYER_REVIEW, MAINTENANCE_CLIENT_WAIT, WAITING_ON_EXTERNAL -> AdminLifecycleStage.MAINTENANCE.getCode();
 		case CLOSING_REVIEW, CLOSED -> AdminLifecycleStage.CLOSING.getCode();
 		case ARCHIVED -> AdminLifecycleStage.ARCHIVED.getCode();
+		};
+	}
+
+	public static CaseStatus expectedStatusForState(String adminState) {
+		AdminState state = normalizedState(adminState);
+		if (state == null) {
+			return null;
+		}
+
+		return switch (state) {
+		case CLOSED -> CaseStatus.CLOSED_CASE_STATUS;
+		case ARCHIVED -> CaseStatus.ARCHIVED_CASE_STATUS;
+		default -> CaseStatus.WIP_CASE_STATUS;
 		};
 	}
 
@@ -78,7 +95,9 @@ public final class AdminLifecycleSupport {
 		case MAINTENANCE_LAWYER_REVIEW -> QUEUE_MAINTENANCE_LAWYER_REVIEW;
 		case MAINTENANCE_CLIENT_WAIT -> QUEUE_MAINTENANCE_CLIENT_WAITING;
 		case WAITING_ON_EXTERNAL -> QUEUE_EXTERNAL_WAITING;
-		case CLOSING_REVIEW, CLOSED, ARCHIVED -> null;
+		case CLOSING_REVIEW -> QUEUE_CLOSING_REVIEW;
+		case CLOSED -> QUEUE_CLOSED;
+		case ARCHIVED -> QUEUE_ARCHIVED;
 		};
 	}
 
@@ -110,8 +129,8 @@ public final class AdminLifecycleSupport {
 
 	public static boolean isOpenStageState(String adminState) {
 		AdminState state = normalizedState(adminState);
-		return state == AdminState.OPENED || state == AdminState.ACTIVE
-				|| state == AdminState.MAINTENANCE_LAWYER_REVIEW || state == AdminState.MAINTENANCE_CLIENT_WAIT
+		return state == AdminState.ACTIVE || state == AdminState.MAINTENANCE_LAWYER_REVIEW
+				|| state == AdminState.MAINTENANCE_CLIENT_WAIT
 				|| state == AdminState.WAITING_ON_EXTERNAL;
 	}
 
@@ -120,11 +139,7 @@ public final class AdminLifecycleSupport {
 		if (state == null) {
 			return adminState;
 		}
-		return switch (state) {
-		case MAINTENANCE_LAWYER_REVIEW -> AdminState.READY_FOR_LAWYER.getCode();
-		case MAINTENANCE_CLIENT_WAIT -> AdminState.WAITING_ON_CLIENT.getCode();
-		default -> state.getCode();
-		};
+		return state.getCode();
 	}
 
 	public static boolean normalizeLegacyState(CaseInstance caseInstance) {
@@ -141,6 +156,38 @@ public final class AdminLifecycleSupport {
 			caseInstance.setResumeToState(AdminState.OPENED.getCode());
 			changed = true;
 		}
+		return changed;
+	}
+
+	public static boolean synchronizeDerivedFields(CaseInstance caseInstance) {
+		if (caseInstance == null) {
+			return false;
+		}
+
+		boolean changed = normalizeLegacyState(caseInstance);
+		if (!isAdminLifecycleCase(caseInstance)) {
+			return changed;
+		}
+
+		String expectedStage = expectedStageForState(caseInstance.getAdminState());
+		if (expectedStage != null && !Objects.equals(expectedStage, caseInstance.getStage())) {
+			caseInstance.setStage(expectedStage);
+			changed = true;
+		}
+
+		CaseStatus expectedStatus = expectedStatusForState(caseInstance.getAdminState());
+		String currentStatus = caseInstance.getStatus() != null ? caseInstance.getStatus().getCode() : null;
+		if (expectedStatus != null && !Objects.equals(expectedStatus.getCode(), currentStatus)) {
+			caseInstance.setStatus(expectedStatus);
+			changed = true;
+		}
+
+		String defaultQueue = defaultQueueForState(caseInstance.getAdminState());
+		if (defaultQueue != null && (caseInstance.getQueueId() == null || caseInstance.getQueueId().isBlank())) {
+			caseInstance.setQueueId(defaultQueue);
+			changed = true;
+		}
+
 		return changed;
 	}
 

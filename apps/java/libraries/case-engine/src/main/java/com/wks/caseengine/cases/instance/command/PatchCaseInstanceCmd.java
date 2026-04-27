@@ -56,7 +56,7 @@ public class PatchCaseInstanceCmd implements Command<CaseInstance> {
 			target.setQueueId(mergePatch.getQueueId());
 		}
 		if (AdminLifecycleSupport.isAdminLifecycleCase(target)) {
-			AdminLifecycleSupport.normalizeLegacyState(target);
+			AdminLifecycleSupport.synchronizeDerivedFields(target);
 			AdminLifecycleSupport.applyEvaluation(target);
 		}
 

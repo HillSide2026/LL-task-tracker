@@ -179,8 +179,11 @@ public class CaseInstanceServiceImplTest {
 						Cursor.empty(), "asc", "10"));
 
 		verify(repository).update(Mockito.eq("BK-1"), Mockito.argThat(caseInstance ->
-				AdminState.OPENED.getCode().equals(caseInstance.getAdminState()) && caseInstance.getAdminHealth() != null));
+				AdminState.OPENED.getCode().equals(caseInstance.getAdminState())
+						&& "Opening".equals(caseInstance.getStage())
+						&& caseInstance.getAdminHealth() != null));
 		assertEquals(AdminState.OPENED.getCode(), result.first().getAdminState());
+		assertEquals("Opening", result.first().getStage());
 	}
 
 	private void setJwtSecurityContext(String sub, List<String> roles) {

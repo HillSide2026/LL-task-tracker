@@ -29,12 +29,25 @@ class AdminLifecycleMigrationScriptsTest {
 			executeSql(statement, resource("migration-case-instance-admin-lifecycle-h2.sql"));
 			executeSql(statement, resource("migration-case-instance-opened-backfill-h2.sql"));
 			executeSql(statement, resource("migration-case-instance-opened-backfill-h2.sql"));
+			executeSql(statement, resource("migration-case-instance-opened-stage-backfill-h2.sql"));
+			executeSql(statement, resource("migration-case-instance-opened-stage-backfill-h2.sql"));
 
 			try (ResultSet rs = statement.executeQuery(
-					"SELECT admin_state, resume_to_state FROM case_instance WHERE business_key = 'BK-1'")) {
+					"SELECT admin_state, resume_to_state, stage FROM case_instance WHERE business_key = 'BK-1'")) {
 				assertTrue(rs.next());
 				assertEquals("Opened", rs.getString("admin_state"));
 				assertEquals("Opened", rs.getString("resume_to_state"));
+				assertEquals("Opening", rs.getString("stage"));
+			}
+
+			statement.executeUpdate(
+					"INSERT INTO case_instance (business_key, status, stage, admin_state) VALUES ('BK-2', 'WIP_CASE_STATUS', 'Maintenance', 'Opened')");
+			executeSql(statement, resource("migration-case-instance-opened-stage-backfill-h2.sql"));
+
+			try (ResultSet rs = statement.executeQuery(
+					"SELECT stage FROM case_instance WHERE business_key = 'BK-2'")) {
+				assertTrue(rs.next());
+				assertEquals("Opening", rs.getString("stage"));
 			}
 		}
 	}
@@ -48,6 +61,8 @@ class AdminLifecycleMigrationScriptsTest {
 		assertTrue(h2Migration.contains("external_party_ref"));
 		assertTrue(postgresqlMigration.contains("opened_at"));
 		assertTrue(h2Migration.contains("opened_at"));
+		assertTrue(resource("migration-case-instance-opened-stage-backfill-postgresql.sql").contains("stage = 'Opening'"));
+		assertTrue(resource("migration-case-instance-opened-stage-backfill-h2.sql").contains("stage = 'Opening'"));
 	}
 
 	private String resource(String path) throws IOException {

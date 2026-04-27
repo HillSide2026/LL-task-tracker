@@ -32,7 +32,7 @@ public class SaveCaseInstanceWithValuesCmd implements Command<Void> {
 	@Override
 	public Void execute(CommandContext commandContext) {
 		if (AdminLifecycleSupport.isAdminLifecycleCase(caseInstance)) {
-			AdminLifecycleSupport.normalizeLegacyState(caseInstance);
+			AdminLifecycleSupport.synchronizeDerivedFields(caseInstance);
 			AdminLifecycleSupport.applyEvaluation(caseInstance);
 		}
 		commandContext.getCaseInstanceRepository().save(caseInstance);

@@ -96,6 +96,7 @@ class AdminLifecycleMutationCommandTest {
 		verify(caseInstanceRepository).update(eq("BK-1"), caseInstanceCaptor.capture());
 		CaseInstance updatedCase = caseInstanceCaptor.getValue();
 		assertEquals(AdminState.OPENED.getCode(), updatedCase.getAdminState());
+		assertEquals("Opening", updatedCase.getStage());
 		assertEquals(AdminHealth.RED.getCode(), updatedCase.getAdminHealth());
 		assertTrue(updatedCase.getHealthReasonCodes().contains(AdminHealthReasonCode.UNOWNED_ACTIVE_CASE.getCode()));
 		assertNotNull(updatedCase.getHealthEvaluatedAt());
@@ -113,6 +114,7 @@ class AdminLifecycleMutationCommandTest {
 		verify(caseInstanceRepository).save(caseInstanceCaptor.capture());
 		CaseInstance savedCase = caseInstanceCaptor.getValue();
 		assertEquals(AdminState.OPENED.getCode(), savedCase.getAdminState());
+		assertEquals("Opening", savedCase.getStage());
 		assertEquals(AdminHealth.RED.getCode(), savedCase.getAdminHealth());
 		assertNotNull(savedCase.getHealthEvaluatedAt());
 	}

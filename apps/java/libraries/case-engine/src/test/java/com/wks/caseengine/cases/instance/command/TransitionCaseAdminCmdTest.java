@@ -69,7 +69,7 @@ class TransitionCaseAdminCmdTest {
 	void shouldActivateOpenedMatterAndEmitCaseActivatedEvent() throws Exception {
 		CaseInstance existingCase = CaseInstance.builder().businessKey("BK-1")
 				.caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID).adminState(AdminState.OPENED.getCode())
-				.stage("Maintenance").status("WIP_CASE_STATUS").queueId(AdminLifecycleSupport.QUEUE_OPEN)
+				.stage("Opening").status("WIP_CASE_STATUS").queueId(AdminLifecycleSupport.QUEUE_OPEN)
 				.adminOwnerId("admin-1").adminOwnerName("Admin Owner")
 				.responsibleLawyerId("lawyer-sub-1").responsibleLawyerName("Assigned Lawyer")
 				.nextActionOwnerType(NextActionOwnerType.ADMIN.getCode()).nextActionSummary("Activate control").build();
@@ -85,6 +85,71 @@ class TransitionCaseAdminCmdTest {
 		assertTrue(updatedCase.getAdminEvents().stream()
 				.anyMatch(event -> AdminEventType.CASE_ACTIVATED.getCode().equals(event.getEventType())));
 		assertEquals(AdminState.ACTIVE.getCode(), caseInstanceCaptor.getValue().getAdminState());
+	}
+
+	@Test
+	void shouldStartClosingReviewFromActiveMatter() throws Exception {
+		CaseInstance existingCase = CaseInstance.builder().businessKey("BK-2")
+				.caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID).adminState(AdminState.ACTIVE.getCode())
+				.stage("Maintenance").status("WIP_CASE_STATUS").queueId(AdminLifecycleSupport.QUEUE_ACTIVE)
+				.adminOwnerId("admin-1").adminOwnerName("Admin Owner")
+				.nextActionOwnerType(NextActionOwnerType.ADMIN.getCode()).nextActionSummary("Maintain matter control").build();
+		when(caseInstanceRepository.get("BK-2")).thenReturn(existingCase);
+
+		CaseInstance updatedCase = new TransitionCaseAdminCmd("BK-2", AdminTransition.START_CLOSING_REVIEW,
+				AdminTransitionRequest.builder().nextActionSummary("Complete final closing review").build())
+				.execute(commandContext);
+
+		verify(caseInstanceRepository).update(eq("BK-2"), caseInstanceCaptor.capture());
+		assertEquals(AdminState.CLOSING_REVIEW.getCode(), updatedCase.getAdminState());
+		assertEquals("Closing", updatedCase.getStage());
+		assertEquals(AdminLifecycleSupport.QUEUE_CLOSING_REVIEW, updatedCase.getQueueId());
+		assertEquals("Complete final closing review", updatedCase.getNextActionSummary());
+		assertTrue(updatedCase.getAdminEvents().stream()
+				.anyMatch(event -> AdminEventType.CLOSING_REVIEW_STARTED.getCode().equals(event.getEventType())));
+	}
+
+	@Test
+	void shouldCloseMatterFromClosingReview() throws Exception {
+		CaseInstance existingCase = CaseInstance.builder().businessKey("BK-3")
+				.caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID).adminState(AdminState.CLOSING_REVIEW.getCode())
+				.stage("Closing").status("WIP_CASE_STATUS").queueId(AdminLifecycleSupport.QUEUE_CLOSING_REVIEW)
+				.adminOwnerId("admin-1").adminOwnerName("Admin Owner")
+				.nextActionOwnerType(NextActionOwnerType.ADMIN.getCode()).nextActionSummary("Complete final closing review")
+				.nextActionDueAt("2026-05-01").build();
+		when(caseInstanceRepository.get("BK-3")).thenReturn(existingCase);
+
+		CaseInstance updatedCase = new TransitionCaseAdminCmd("BK-3", AdminTransition.CLOSE_MATTER,
+				AdminTransitionRequest.builder().note("Matter closure confirmed").build()).execute(commandContext);
+
+		verify(caseInstanceRepository).update(eq("BK-3"), caseInstanceCaptor.capture());
+		assertEquals(AdminState.CLOSED.getCode(), updatedCase.getAdminState());
+		assertEquals("Closing", updatedCase.getStage());
+		assertEquals(CaseStatus.CLOSED_CASE_STATUS, updatedCase.getStatus());
+		assertEquals(AdminLifecycleSupport.QUEUE_CLOSED, updatedCase.getQueueId());
+		assertEquals(null, updatedCase.getNextActionSummary());
+		assertTrue(updatedCase.getAdminEvents().stream()
+				.anyMatch(event -> AdminEventType.CASE_CLOSED.getCode().equals(event.getEventType())));
+	}
+
+	@Test
+	void shouldArchiveClosedMatter() throws Exception {
+		CaseInstance existingCase = CaseInstance.builder().businessKey("BK-4")
+				.caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID).adminState(AdminState.CLOSED.getCode())
+				.stage("Closing").status(CaseStatus.CLOSED_CASE_STATUS.getCode()).queueId(AdminLifecycleSupport.QUEUE_CLOSED)
+				.adminOwnerId("admin-1").adminOwnerName("Admin Owner").build();
+		when(caseInstanceRepository.get("BK-4")).thenReturn(existingCase);
+
+		CaseInstance updatedCase = new TransitionCaseAdminCmd("BK-4", AdminTransition.ARCHIVE_MATTER,
+				AdminTransitionRequest.builder().note("Matter archived").build()).execute(commandContext);
+
+		verify(caseInstanceRepository).update(eq("BK-4"), caseInstanceCaptor.capture());
+		assertEquals(AdminState.ARCHIVED.getCode(), updatedCase.getAdminState());
+		assertEquals("Archived", updatedCase.getStage());
+		assertEquals(CaseStatus.ARCHIVED_CASE_STATUS, updatedCase.getStatus());
+		assertEquals(AdminLifecycleSupport.QUEUE_ARCHIVED, updatedCase.getQueueId());
+		assertTrue(updatedCase.getAdminEvents().stream()
+				.anyMatch(event -> AdminEventType.CASE_ARCHIVED.getCode().equals(event.getEventType())));
 	}
 
 	@Test

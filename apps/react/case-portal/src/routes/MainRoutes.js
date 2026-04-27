@@ -111,6 +111,16 @@ export const MainRoutes = (
             ),
           },
           {
+            path: 'admin-opening/opened',
+            element: (
+              <CaseList
+                caseDefId={ADMIN_OPENING_CONTROL_CASE_DEF_ID}
+                status={CaseStatus.WipCaseStatus.description}
+                filters={{ adminState: AdminState.Opened }}
+              />
+            ),
+          },
+          {
             path: 'admin-opening/exceptions',
             element: (
               <CaseList
@@ -167,6 +177,36 @@ export const MainRoutes = (
                 caseDefId={ADMIN_OPENING_CONTROL_CASE_DEF_ID}
                 status={CaseStatus.WipCaseStatus.description}
                 filters={{ exceptionOnly: true }}
+              />
+            ),
+          },
+          {
+            path: 'admin-closing/review',
+            element: (
+              <CaseList
+                caseDefId={ADMIN_OPENING_CONTROL_CASE_DEF_ID}
+                status={CaseStatus.WipCaseStatus.description}
+                filters={{ adminState: AdminState.ClosingReview }}
+              />
+            ),
+          },
+          {
+            path: 'admin-closing/closed',
+            element: (
+              <CaseList
+                caseDefId={ADMIN_OPENING_CONTROL_CASE_DEF_ID}
+                status={CaseStatus.ClosedCaseStatus.description}
+                filters={{ adminState: AdminState.Closed }}
+              />
+            ),
+          },
+          {
+            path: 'admin-archive/archived',
+            element: (
+              <CaseList
+                caseDefId={ADMIN_OPENING_CONTROL_CASE_DEF_ID}
+                status={CaseStatus.ArchivedCaseStatus.description}
+                filters={{ adminState: AdminState.Archived }}
               />
             ),
           },

@@ -22,7 +22,10 @@ public enum AdminTransition implements Serializable {
 	START_EXTERNAL_WAIT("startExternalWait"),
 	RESUME_FROM_EXTERNAL_WAIT("resumeFromExternalWait"),
 	LAWYER_REQUEST_CLIENT_FOLLOWUP("lawyerRequestClientFollowup"),
-	LAWYER_REQUEST_EXTERNAL_FOLLOWUP("lawyerRequestExternalFollowup");
+	LAWYER_REQUEST_EXTERNAL_FOLLOWUP("lawyerRequestExternalFollowup"),
+	START_CLOSING_REVIEW("startClosingReview"),
+	CLOSE_MATTER("closeMatter"),
+	ARCHIVE_MATTER("archiveMatter");
 
 	private final String code;
 

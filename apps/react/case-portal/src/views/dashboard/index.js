@@ -56,6 +56,13 @@ const DashboardDefault = () => {
       </Grid>
       <Grid item xs={12} sm={6} md={4} lg={3}>
         <DashboardCard
+          title='Opened Matters'
+          icon={<IconArchive />}
+          to='/case-list/admin-opening/opened'
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={4} lg={3}>
+        <DashboardCard
           title='Exceptions'
           icon={<IconAlertTriangle />}
           to='/case-list/admin-opening/exceptions'
@@ -94,6 +101,27 @@ const DashboardDefault = () => {
           title='Maintenance Exceptions'
           icon={<IconAlertTriangle />}
           to='/case-list/admin-maintenance/exceptions'
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={4} lg={3}>
+        <DashboardCard
+          title='Closing Review'
+          icon={<IconChecklist />}
+          to='/case-list/admin-closing/review'
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={4} lg={3}>
+        <DashboardCard
+          title='Closed Matters'
+          icon={<IconArchive />}
+          to='/case-list/admin-closing/closed'
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={4} lg={3}>
+        <DashboardCard
+          title='Archived Matters'
+          icon={<IconSquareAsterisk />}
+          to='/case-list/admin-archive/archived'
         />
       </Grid>
 

@@ -330,6 +330,19 @@ export const CaseForm = ({ open, handleClose, aCase, keycloak }) => {
       defaults.values.nextActionSummary =
         caseData?.nextActionSummary || 'Await external response'
     }
+    if (transitionName === AdminTransition.StartClosingReview) {
+      defaults.title = 'Start Closing Review'
+      defaults.values.nextActionSummary =
+        caseData?.nextActionSummary || 'Complete final closing review'
+    }
+    if (transitionName === AdminTransition.CloseMatter) {
+      defaults.title = 'Close Matter'
+      defaults.values.nextActionSummary = ''
+    }
+    if (transitionName === AdminTransition.ArchiveMatter) {
+      defaults.title = 'Archive Matter'
+      defaults.values.nextActionSummary = ''
+    }
 
     setTransitionError('')
     setTransitionDialog({
@@ -568,6 +581,15 @@ export const CaseForm = ({ open, handleClose, aCase, keycloak }) => {
           Update Control
         </Button>,
       )
+      actions.push(
+        <Button
+          key='start-closing-review'
+          color='inherit'
+          onClick={() => openTransition(AdminTransition.StartClosingReview)}
+        >
+          Start Closing Review
+        </Button>,
+      )
     }
 
     if (canLawyerAct && state === AdminState.MaintenanceLawyerReview) {
@@ -651,6 +673,30 @@ export const CaseForm = ({ open, handleClose, aCase, keycloak }) => {
       )
     }
 
+    if (canAdminAct && state === AdminState.ClosingReview) {
+      actions.push(
+        <Button
+          key='close-matter'
+          color='inherit'
+          onClick={() => openTransition(AdminTransition.CloseMatter)}
+        >
+          Close Matter
+        </Button>,
+      )
+    }
+
+    if (canAdminAct && state === AdminState.Closed) {
+      actions.push(
+        <Button
+          key='archive-matter'
+          color='inherit'
+          onClick={() => openTransition(AdminTransition.ArchiveMatter)}
+        >
+          Archive Matter
+        </Button>,
+      )
+    }
+
     return actions
   }
 
@@ -683,6 +729,13 @@ export const CaseForm = ({ open, handleClose, aCase, keycloak }) => {
     AdminTransition.LawyerReturnToActive,
     AdminTransition.ResumeFromMaintenanceClientWait,
     AdminTransition.ResumeFromExternalWait,
+    AdminTransition.StartClosingReview,
+  ].includes(transitionDialog.transitionName)
+
+  const hidesNextActionSummary = [
+    AdminTransition.LawyerApproveOpen,
+    AdminTransition.CloseMatter,
+    AdminTransition.ArchiveMatter,
   ].includes(transitionDialog.transitionName)
 
   const needsNextActionRouting =
@@ -1086,8 +1139,7 @@ export const CaseForm = ({ open, handleClose, aCase, keycloak }) => {
                   handleTransitionFieldChange('note', event.target.value)
                 }
               />
-              {transitionDialog.transitionName !==
-                AdminTransition.LawyerApproveOpen && (
+              {!hidesNextActionSummary && (
                 <TextField
                   label='Next Action Summary'
                   value={transitionDialog.values.nextActionSummary}

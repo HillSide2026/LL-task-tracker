@@ -11,6 +11,9 @@ export const AdminState = {
   MaintenanceLawyerReview: 'Maintenance Lawyer Review',
   MaintenanceClientWait: 'Maintenance Client Wait',
   WaitingOnExternal: 'Waiting on External',
+  ClosingReview: 'Closing Review',
+  Closed: 'Closed',
+  Archived: 'Archived',
   Open: 'Opened',
 }
 
@@ -33,6 +36,9 @@ export const AdminTransition = {
   ResumeFromExternalWait: 'resumeFromExternalWait',
   LawyerRequestClientFollowup: 'lawyerRequestClientFollowup',
   LawyerRequestExternalFollowup: 'lawyerRequestExternalFollowup',
+  StartClosingReview: 'startClosingReview',
+  CloseMatter: 'closeMatter',
+  ArchiveMatter: 'archiveMatter',
 }
 
 export function isAdminLifecycleCase(aCase) {
@@ -43,10 +49,6 @@ export function getAdminStateLabel(adminState) {
   switch (adminState) {
     case 'Open':
       return AdminState.Opened
-    case AdminState.MaintenanceLawyerReview:
-      return AdminState.ReadyForLawyer
-    case AdminState.MaintenanceClientWait:
-      return AdminState.WaitingOnClient
     default:
       return adminState || '-'
   }

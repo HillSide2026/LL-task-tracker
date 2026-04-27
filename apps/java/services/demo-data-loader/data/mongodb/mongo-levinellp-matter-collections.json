@@ -25,6 +25,16 @@
           "id": "2",
           "index": 2,
           "name": "Maintenance"
+        },
+        {
+          "id": "3",
+          "index": 3,
+          "name": "Closing"
+        },
+        {
+          "id": "4",
+          "index": 4,
+          "name": "Archived"
         }
       ],
       "kanbanConfig": {},
@@ -460,6 +470,30 @@
       "id": "matter-admin-external-waiting",
       "name": "Matter Admin External Waiting",
       "description": "Matter Admin External Waiting"
+    },
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971acc"
+      },
+      "id": "matter-admin-closing-review",
+      "name": "Matter Admin Closing Review",
+      "description": "Matter Admin Closing Review"
+    },
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971acd"
+      },
+      "id": "matter-admin-closed",
+      "name": "Matter Admin Closed",
+      "description": "Matter Admin Closed"
+    },
+    {
+      "_id": {
+        "$oid": "66bfcea90f4949f8dd971ace"
+      },
+      "id": "matter-admin-archived",
+      "name": "Matter Admin Archived",
+      "description": "Matter Admin Archived"
     }
   ]
 }

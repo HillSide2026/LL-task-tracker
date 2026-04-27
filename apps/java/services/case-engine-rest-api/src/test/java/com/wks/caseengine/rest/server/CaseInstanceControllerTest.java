@@ -140,6 +140,17 @@ public class CaseInstanceControllerTest {
 	}
 
 	@Test
+	public void shouldCloseAdminLifecycleCase() throws Exception {
+		CaseInstance caseInstance = CaseInstance.builder().caseDefinitionId("matter-admin-opening-control")
+				.adminState("Closed").stage("Closing").status("CLOSED_CASE_STATUS").build();
+		when(caseInstanceService.transition(Mockito.eq("BK-2"), Mockito.eq(AdminTransition.CLOSE_MATTER), Mockito.any()))
+				.thenReturn(caseInstance);
+		this.mockMvc.perform(post("/case/{businessKey}/transition/{transitionName}", "BK-2", "closeMatter")
+				.contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"Matter closure confirmed\"}"))
+				.andExpect(status().isOk());
+	}
+
+	@Test
 	public void shouldFindCaseInstance() throws Exception {
 		when(caseInstanceService.find(Mockito.any())).thenReturn(PageResult.<CaseInstance>builder().content(List.of()).build());
 		this.mockMvc.perform(get("/case")).andExpect(status().isOk());

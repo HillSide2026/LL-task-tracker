@@ -56,6 +56,8 @@ It includes:
 - Lawyer opening review.
 - Client and external waiting states.
 - Matter activation.
+- Closing review.
+- Closure and archive control.
 - Maintenance follow-up and exception queues.
 
 Important implementation areas:
@@ -67,6 +69,7 @@ Important implementation areas:
 - `apps/react/case-portal/src/views/dashboard`
 - `apps/java/services/demo-data-loader/data/camunda7/levinellp`
 - `apps/java/services/demo-data-loader/data/mongodb/mongo-levinellp-matter-collections.json`
+- `docs/admin-lifecycle.md`
 
 ## Deployment
 
