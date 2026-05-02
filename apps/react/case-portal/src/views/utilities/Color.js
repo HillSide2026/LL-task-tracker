@@ -155,7 +155,7 @@ const UIColor = () => (
             <Grid item xs={12} sm={6} md={4} lg={2}>
               <ColorBox
                 bgcolor='success.light'
-                data={{ label: 'Green-A100', color: '#b9f6ca' }}
+                data={{ label: 'Success light', color: '#b8cfbf' }}
                 title='success.light'
                 dark
               />
@@ -163,21 +163,21 @@ const UIColor = () => (
             <Grid item xs={12} sm={6} md={4} lg={2}>
               <ColorBox
                 bgcolor='success.main'
-                data={{ label: 'Green-A200', color: '#69f0ae' }}
+                data={{ label: 'Success main', color: '#5f806a' }}
                 title='success[200]'
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4} lg={2}>
               <ColorBox
                 bgcolor='success.main'
-                data={{ label: 'Green-A400', color: '#69f0ae' }}
+                data={{ label: 'Success main', color: '#5f806a' }}
                 title='success.main'
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4} lg={2}>
               <ColorBox
                 bgcolor='success.dark'
-                data={{ label: 'Green-A700', color: '#00c853' }}
+                data={{ label: 'Success dark', color: '#44634f' }}
                 title='success.dark'
               />
             </Grid>

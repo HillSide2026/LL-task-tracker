@@ -9,7 +9,18 @@ const DrawerHeader = ({ open }) => {
 
   return (
     <DrawerHeaderStyled theme={theme} open={open}>
-      <Stack direction='row' spacing={1} alignItems='center'>
+      <Stack
+        direction='row'
+        spacing={1}
+        alignItems='center'
+        sx={{
+          '& img': {
+            width: open ? 112 : 40,
+            height: open ? 112 : 40,
+            objectFit: 'contain',
+          },
+        }}
+      >
         <Logo />
       </Stack>
     </DrawerHeaderStyled>

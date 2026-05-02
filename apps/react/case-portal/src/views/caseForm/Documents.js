@@ -109,7 +109,8 @@ function Documents({ aCase, initialValue }) {
         >
           <Avatar
             style={{
-              backgroundColor: '#27CDF2',
+              backgroundColor: '#d2dde8',
+              color: '#23466f',
               fontSize: 40,
               height: 60,
               width: 60,
@@ -149,19 +150,19 @@ function Documents({ aCase, initialValue }) {
               >
                 <ListItemAvatar>
                   {file.type === 'application/pdf' && (
-                    <Avatar style={{ backgroundColor: 'red' }}>
+                    <Avatar style={{ backgroundColor: '#8c3f3f' }}>
                       <FilePdfOutlined />
                     </Avatar>
                   )}
 
                   {file.type === 'application/xls' && (
-                    <Avatar style={{ backgroundColor: 'green' }}>
+                    <Avatar style={{ backgroundColor: '#5f806a' }}>
                       <FileExcelOutlined />
                     </Avatar>
                   )}
 
                   {file.type && file.type.includes('image/') && (
-                    <Avatar style={{ backgroundColor: 'lightblue' }}>
+                    <Avatar style={{ backgroundColor: '#7894ad' }}>
                       <FileImageOutlined />
                     </Avatar>
                   )}

@@ -1,6 +1,3 @@
-// material-ui
-import { alpha } from '@mui/material/styles'
-
 // ==============================|| OVERRIDES - OUTLINED INPUT ||============================== //
 
 export default function OutlinedInput(theme) {
@@ -15,12 +12,11 @@ export default function OutlinedInput(theme) {
         },
         root: {
           '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: theme.palette.primary.light,
+            borderColor: theme.palette.primary.main,
           },
           '&.Mui-focused': {
-            boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
             '& .MuiOutlinedInput-notchedOutline': {
-              border: `1px solid ${theme.palette.primary.light}`,
+              border: `1px solid ${theme.palette.primary.main}`,
             },
           },
           '&.Mui-error': {
@@ -28,7 +24,6 @@ export default function OutlinedInput(theme) {
               borderColor: theme.palette.error.light,
             },
             '&.Mui-focused': {
-              boxShadow: `0 0 0 2px ${alpha(theme.palette.error.main, 0.2)}`,
               '& .MuiOutlinedInput-notchedOutline': {
                 border: `1px solid ${theme.palette.error.light}`,
               },

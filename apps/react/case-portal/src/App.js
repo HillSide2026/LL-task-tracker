@@ -13,6 +13,10 @@ import './App.css'
 const ScrollTop = lazy(() => import('./components/ScrollTop'))
 
 const App = () => {
+  const isVisualPreview =
+    process.env.NODE_ENV === 'development' &&
+    new URLSearchParams(window.location.search).get('preview') === '1'
+
   const [keycloak, setKeycloak] = useState({})
   const [authenticated, setAuthenticated] = useState(null)
   const [recordsTypes, setRecordsTypes] = useState([])
@@ -20,6 +24,75 @@ const App = () => {
   const [menu, setMenu] = useState({ items: [] })
 
   useEffect(() => {
+    if (isVisualPreview) {
+      const previewKeycloak = {
+        logout: () => undefined,
+        idTokenParsed: {
+          given_name: 'Preview',
+          name: 'Levine Law Preview',
+          email: 'preview@levinelaw.ca',
+        },
+        tokenParsed: {
+          name: 'Levine Law Preview',
+          email: 'preview@levinelaw.ca',
+        },
+        hasRealmRole: () => true,
+        updateToken: () => Promise.resolve(false),
+      }
+      const previewMenu = {
+        items: [...menuItemsDefs.items],
+      }
+      const previewCaseDefinitions = [
+        { id: 'admin-opening', name: 'Matter Opening' },
+        { id: 'corporate', name: 'Corporate Matters' },
+      ]
+      const previewRecordTypes = [{ id: 'clients' }, { id: 'companies' }]
+
+      previewMenu.items[1].children
+        .find((menu) => menu.id === 'case-list')
+        .children.push(
+          {
+            id: 'admin-opening',
+            title: 'Matter Opening',
+            type: 'item',
+            url: '/case-list/admin-opening',
+            breadcrumbs: true,
+          },
+          {
+            id: 'corporate',
+            title: 'Corporate Matters',
+            type: 'item',
+            url: '/case-list/corporate',
+            breadcrumbs: true,
+          },
+        )
+      previewMenu.items[1].children
+        .find((menu) => menu.id === 'record-list')
+        .children.push(
+          {
+            id: 'clients',
+            title: 'Clients',
+            type: 'item',
+            url: '/record-list/clients',
+            breadcrumbs: true,
+          },
+          {
+            id: 'companies',
+            title: 'Companies',
+            type: 'item',
+            url: '/record-list/companies',
+            breadcrumbs: true,
+          },
+        )
+
+      setKeycloak(previewKeycloak)
+      setAuthenticated(true)
+      setRecordsTypes(previewRecordTypes)
+      setCasesDefinitions(previewCaseDefinitions)
+      setMenu(previewMenu)
+      return
+    }
+
     const { keycloak } = sessionStore.bootstrap()
 
     keycloak.init({ onLoad: 'login-required' }).then((authenticated) => {
@@ -68,7 +141,7 @@ const App = () => {
           console.error('Failed to refresh token')
         })
     }
-  }, [])
+  }, [isVisualPreview])
 
   function registerExtensionModulesFormio() {
     Formio.use(RecordTypeChoice)

@@ -14,19 +14,19 @@ const Palette = (mode) => {
 
   const greyPrimary = [
     '#ffffff',
-    '#fafafa',
-    '#f5f5f5',
-    '#f0f0f0',
-    '#d9d9d9',
-    '#bfbfbf',
-    '#8c8c8c',
-    '#595959',
-    '#262626',
-    '#141414',
-    '#000000',
+    '#fbfaf6',
+    '#f5f2ea',
+    '#ebe5da',
+    '#d6cec1',
+    '#b4aa9d',
+    '#81776d',
+    '#5e5750',
+    '#2a2927',
+    '#1f2328',
+    '#121417',
   ]
-  const greyAscent = ['#fafafa', '#bfbfbf', '#434343', '#1f1f1f']
-  const greyConstant = ['#fafafb', '#e6ebf1']
+  const greyAscent = ['#fbfaf6', '#b4aa9d', '#3f444a', '#20242a']
+  const greyConstant = ['#f8f5ee', '#e7dfd1']
 
   colors.grey = [...greyPrimary, ...greyAscent, ...greyConstant]
 
@@ -36,7 +36,7 @@ const Palette = (mode) => {
     palette: {
       mode,
       common: {
-        black: '#000',
+        black: '#121417',
         white: '#fff',
       },
       ...paletteColor,
@@ -50,8 +50,8 @@ const Palette = (mode) => {
       },
       divider: paletteColor.grey[200],
       background: {
-        paper: paletteColor.grey[0],
-        default: paletteColor.grey.A50,
+        paper: '#fffdf8',
+        default: '#f8f5ee',
       },
     },
   })

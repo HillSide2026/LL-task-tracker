@@ -8,7 +8,10 @@ const DrawerHeaderStyled = styled(Box, {
   display: 'flex',
   alignItems: 'center',
   justifyContent: open ? 'flex-start' : 'center',
-  paddingLeft: theme.spacing(open ? 3 : 0),
+  minHeight: open ? 132 : 68,
+  paddingLeft: theme.spacing(open ? 2.5 : 0),
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  backgroundColor: theme.palette.background.paper,
 }))
 
 export default DrawerHeaderStyled

@@ -1,3 +1,22 @@
 legend {
   width: auto;
 }
+
+html,
+body {
+  background: #f8f5ee;
+  color: #2a2927;
+}
+
+body {
+  font-family: 'Inter', 'Open Sans', sans-serif;
+}
+
+a {
+  color: #23466f;
+}
+
+::selection {
+  background: #d2dde8;
+  color: #121417;
+}

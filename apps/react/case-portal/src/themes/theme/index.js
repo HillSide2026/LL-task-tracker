@@ -1,19 +1,19 @@
 // ==============================|| PRESET THEME - THEME SELECTOR ||============================== //
 
 const Theme = (colors) => {
-  const { red, gold, cyan, green, grey } = colors
+  const { red, gold, cyan, grey } = colors
 
   const blue = [
-    '#e8faff',
-    '#bfefff',
-    '#96e1ff',
-    '#6ed1ff',
-    '#45beff',
-    '#1ba0f2',
-    '#0c7ccc',
-    '#025ca6',
-    '#004280',
-    '#002b59',
+    '#f3f6f8',
+    '#e6edf3',
+    '#d2dde8',
+    '#b5c7d7',
+    '#7894ad',
+    '#2f5b8f',
+    '#284f7d',
+    '#23466f',
+    '#1f3d61',
+    '#18304d',
   ]
 
   const greyColors = {
@@ -92,11 +92,11 @@ const Theme = (colors) => {
       contrastText,
     },
     success: {
-      lighter: green[0],
-      light: green[3],
-      main: green[5],
-      dark: green[7],
-      darker: green[9],
+      lighter: '#eef5f0',
+      light: '#b8cfbf',
+      main: '#5f806a',
+      dark: '#44634f',
+      darker: '#31483a',
       contrastText,
     },
     grey: greyColors,

@@ -1,8 +1,8 @@
-import logo from 'assets/images/logo.svg'
+import logo from 'assets/images/levine-law-logo.png'
 
 const Logo = () => {
   return (
-    <img src={logo} alt='Levine LLP Matter Portal' width='154' height='40' />
+    <img src={logo} alt='Levine Law Matter Portal' width='128' height='128' />
   )
 }
 

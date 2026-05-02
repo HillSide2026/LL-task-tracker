@@ -40,7 +40,7 @@
 
 .kanban-overview.e-kanban .Open::before {
   content: '\e700';
-  color: #0251cc;
+  color: #2f5b8f;
   font-size: 16px;
 }
 
@@ -64,7 +64,7 @@
 
 .kanban-overview.e-kanban .Close::before {
   content: '\e702';
-  color: #63ba3c;
+  color: #5f806a;
   font-size: 16px;
 }
 
@@ -104,7 +104,7 @@
   .e-content-cells
   .e-card-wrapper
   .e-card.Low {
-  border-left: 3px solid #1f88e5;
+  border-left: 3px solid #7894ad;
 }
 
 .kanban-overview.e-kanban
@@ -148,7 +148,7 @@
   .e-content-cells
   .e-card-wrapper
   .e-card.Normal {
-  border-left: 3px solid #02897b;
+  border-left: 3px solid #5f806a;
 }
 
 .kanban-overview.e-kanban

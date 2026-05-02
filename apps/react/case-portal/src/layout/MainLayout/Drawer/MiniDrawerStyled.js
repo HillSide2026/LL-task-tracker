@@ -6,6 +6,7 @@ import { drawerWidth } from 'config'
 const openedMixin = (theme) => ({
   width: drawerWidth,
   borderRight: `1px solid ${theme.palette.divider}`,
+  backgroundColor: theme.palette.background.paper,
   transition: theme.transitions.create('width', {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.enteringScreen,
@@ -22,7 +23,7 @@ const closedMixin = (theme) => ({
   overflowX: 'hidden',
   width: 0,
   borderRight: 'none',
-  boxShadow: theme.customShadows.z1,
+  boxShadow: 'none',
 })
 
 const MiniDrawerStyled = styled(Drawer, {

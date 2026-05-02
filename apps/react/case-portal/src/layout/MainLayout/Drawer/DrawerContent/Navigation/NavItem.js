@@ -59,7 +59,7 @@ const NavItem = ({ item, level }) => {
   }, [])
 
   const textColor = 'text.primary'
-  const iconSelectedColor = 'primary.main'
+  const iconSelectedColor = 'primary.dark'
 
   return (
     <ListItemButton
@@ -72,12 +72,15 @@ const NavItem = ({ item, level }) => {
         pl: drawerOpen ? `${level * 28}px` : 1.5,
         py: !drawerOpen && level === 1 ? 1.25 : 1,
         ...(drawerOpen && {
+          mx: 1.5,
+          my: 0.25,
+          borderRadius: 1,
           '&:hover': {
             bgcolor: 'primary.lighter',
           },
           '&.Mui-selected': {
             bgcolor: 'primary.lighter',
-            borderRight: `2px solid ${theme.palette.primary.main}`,
+            borderRight: `2px solid ${theme.palette.primary.dark}`,
             color: iconSelectedColor,
             '&:hover': {
               color: iconSelectedColor,
@@ -116,6 +119,7 @@ const NavItem = ({ item, level }) => {
             ...(!drawerOpen &&
               isSelected && {
                 bgcolor: 'primary.lighter',
+                color: iconSelectedColor,
                 '&:hover': {
                   bgcolor: 'primary.lighter',
                 },

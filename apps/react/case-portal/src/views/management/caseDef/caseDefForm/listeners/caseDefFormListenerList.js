@@ -34,9 +34,9 @@ export const CaseDefFormEvents = ({ caseDef, setCaseDef }) => {
     bottom: '20px',
     right: '20px',
     zIndex: 1000,
-    boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.2)',
+    boxShadow: '0px 1px 3px rgba(18, 20, 23, 0.12)',
     borderRadius: '50%',
-    background: '#fff',
+    background: '#fffdf8',
   }
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export const CaseDefFormEvents = ({ caseDef, setCaseDef }) => {
                             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                               <Box
                                 component={AssignmentTurnedIn}
-                                color='green'
+                                color='success.dark'
                               />
                               <Typography variant='subtitle1'>Then</Typography>
                             </AccordionSummary>

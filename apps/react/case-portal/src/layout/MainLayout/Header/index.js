@@ -24,6 +24,7 @@ const Header = ({ open, handleDrawerToggle, keycloak }) => {
           color: 'text.primary',
           bgcolor: open ? iconBackColorOpen : iconBackColor,
           ml: { xs: 0, lg: -2 },
+          border: `1px solid ${theme.palette.divider}`,
         }}
       >
         {!open ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -38,6 +39,7 @@ const Header = ({ open, handleDrawerToggle, keycloak }) => {
     elevation: 0,
     sx: {
       borderBottom: `1px solid ${theme.palette.divider}`,
+      bgcolor: 'background.paper',
     },
   }
 

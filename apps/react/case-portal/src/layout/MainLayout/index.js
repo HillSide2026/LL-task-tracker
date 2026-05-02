@@ -22,7 +22,14 @@ const MainLayout = ({ keycloak, authenticated }) => {
   return (
     keycloak &&
     authenticated && (
-      <Box sx={{ display: 'flex', width: '100%' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          width: '100%',
+          minHeight: '100vh',
+          bgcolor: 'background.default',
+        }}
+      >
         <Header
           open={open}
           handleDrawerToggle={handleDrawerToggle}
@@ -31,7 +38,12 @@ const MainLayout = ({ keycloak, authenticated }) => {
         <Drawer open={open} handleDrawerToggle={handleDrawerToggle} />
         <Box
           component='main'
-          sx={{ width: '100%', flexGrow: 1, p: { xs: 2, sm: 3 } }}
+          sx={{
+            width: '100%',
+            flexGrow: 1,
+            p: { xs: 2, sm: 3 },
+            color: 'text.primary',
+          }}
         >
           <Toolbar />
           <Breadcrumbs navigation={menu} divider={false} />

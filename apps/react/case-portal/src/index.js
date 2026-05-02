@@ -5,8 +5,15 @@ import { store } from './store'
 import App from './App'
 import i18n from './i18n'
 import { I18nextProvider } from 'react-i18next'
+import favicon from 'assets/images/levine-favicon.png'
 
 const container = document.getElementById('root')
+const faviconLink = document.querySelector("link[rel='icon']")
+
+if (faviconLink) {
+  faviconLink.href = favicon
+}
+
 const root = createRoot(container)
 root.render(
   <Provider store={store}>

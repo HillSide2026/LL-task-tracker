@@ -46,11 +46,12 @@ function CreateMainCard(
       sx={{
         ...sx,
         border: border ? '1px solid' : 'none',
-        borderRadius: 2,
+        borderRadius: 1,
+        backgroundColor: theme.palette.background.paper,
         borderColor:
           theme.palette.mode === 'dark'
             ? theme.palette.divider
-            : theme.palette.grey.A800,
+            : theme.palette.divider,
         boxShadow:
           boxShadow && (!border || theme.palette.mode === 'dark')
             ? shadow || theme.customShadows.z1

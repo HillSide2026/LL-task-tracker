@@ -14,13 +14,16 @@ export default function Button(theme) {
       },
       styleOverrides: {
         root: {
-          fontWeight: 400,
+          borderRadius: 6,
+          fontWeight: 600,
+          letterSpacing: 0,
         },
         contained: {
           ...disabledStyle,
         },
         outlined: {
           ...disabledStyle,
+          borderColor: theme.palette.primary.main,
         },
       },
     },
