@@ -33,6 +33,20 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import com.wks.caseengine.cases.definition.CaseStatus;
 import com.wks.caseengine.cases.instance.CaseInstance;
 import com.wks.caseengine.cases.instance.CaseInstanceFilter;
+import com.wks.caseengine.cases.instance.accounts.AccountsEvent;
+import com.wks.caseengine.cases.instance.accounts.AccountsEventType;
+import com.wks.caseengine.cases.instance.accounts.AccountsHealth;
+import com.wks.caseengine.cases.instance.accounts.AccountsHealthReasonCode;
+import com.wks.caseengine.cases.instance.accounts.AccountsLifecycleStage;
+import com.wks.caseengine.cases.instance.accounts.AccountsPolicyProfile;
+import com.wks.caseengine.cases.instance.accounts.AccountsReadinessStatus;
+import com.wks.caseengine.cases.instance.accounts.AccountsState;
+import com.wks.caseengine.cases.instance.accounts.AccountsWorkOwnerType;
+import com.wks.caseengine.cases.instance.accounts.AccountsWorkPriority;
+import com.wks.caseengine.cases.instance.accounts.AccountsWorkQueue;
+import com.wks.caseengine.cases.instance.accounts.BillingMode;
+import com.wks.caseengine.cases.instance.accounts.BillingPartyModel;
+import com.wks.caseengine.cases.instance.accounts.MatterType;
 import com.wks.caseengine.cases.instance.repository.CaseInstanceRepositoryImpl;
 import com.wks.caseengine.pagination.Cursor;
 import com.wks.caseengine.pagination.PageResult;
@@ -131,6 +145,123 @@ public class CaseInstanceRepositoryImplIT {
 		PageResult<CaseInstance> results = repository.find(filter);
 
 		assertNotNull(results);
+		assertEquals(1, results.size());
+		assertEquals("MATTER-100", results.first().getBusinessKey());
+	}
+
+	@Test
+	public void shouldRoundTripAccountsFoundationFields() throws Exception {
+		CaseInstance existingCase = repository.get("MATTER-100");
+		existingCase.setMatterType(MatterType.HOURLY_RETAINER.getCode());
+		existingCase.setBillingPartyModel(BillingPartyModel.DIRECT_CLIENT.getCode());
+		existingCase.setBillingMode(BillingMode.HOURLY_RETAINER.getCode());
+		existingCase.setAccountsProfile(AccountsPolicyProfile.HOURLY_RETAINER_PROFILE.getCode());
+		existingCase.setBillingSetupComplete(true);
+		existingCase.setFlatFeeAmount("2500");
+		existingCase.setPaymentMethodAuthorized(true);
+		existingCase.setPaymentMethodRef("card-1");
+		existingCase.setRetainerAmount("5000");
+		existingCase.setRetainerFundsReceived(true);
+		existingCase.setSubscriptionPlanId("plan-1");
+		existingCase.setSubscriptionPlanName("Monthly");
+		existingCase.setSubscriptionActive(true);
+		existingCase.setInstructingFirmId("firm-1");
+		existingCase.setInstructingFirmName("Client Firm");
+		existingCase.setCounselBillingMode(BillingMode.COUNSEL_RETAINER.getCode());
+		existingCase.setCounselBillingPartyOverride(false);
+		existingCase.setAccountsStage(AccountsLifecycleStage.SETUP.getCode());
+		existingCase.setAccountsState(AccountsState.AWAITING_RETAINER_FUNDING.getCode());
+		existingCase.setAccountsHealth(AccountsHealth.AMBER.getCode());
+		existingCase.setAccountsHealthReasonCodes(List.of(AccountsHealthReasonCode.MISSING_RETAINER.getCode()));
+		existingCase.setAccountsHealthEvaluatedAt("2026-05-02T10:15:30-04:00");
+		existingCase.setAccountsStaleSince("2026-05-02T10:15:30-04:00");
+		existingCase.setAccountsMalformedCase(false);
+		existingCase.setAccountsReadinessStatus(AccountsReadinessStatus.READY.getCode());
+		existingCase.setAccountsReadinessReasonCodes(List.of());
+		existingCase.setAccountsReadinessEvaluatedAt("2026-05-02T10:16:30-04:00");
+		existingCase.setAccountsReadinessSummary("Accounts setup is ready for administrative opening");
+		existingCase.setAccountsQueueId(AccountsWorkQueue.ACCOUNTS_READY);
+		existingCase.setAccountsNextActionOwnerType(AccountsWorkOwnerType.ACCOUNTS.getCode());
+		existingCase.setAccountsNextActionSummary("Accounts setup is ready for administrative opening");
+		existingCase.setAccountsNextActionDueAt("2026-05-05");
+		existingCase.setAccountsWorkBlocked(false);
+		existingCase.setAccountsWorkPriority(AccountsWorkPriority.NORMAL.getCode());
+		existingCase.setAccountsEvents(List.of(AccountsEvent.builder()
+				.eventType(AccountsEventType.ACCOUNTS_INITIALIZED.getCode())
+				.toState(AccountsState.AWAITING_RETAINER_FUNDING.getCode())
+				.toStage(AccountsLifecycleStage.SETUP.getCode()).build()));
+
+		repository.update("MATTER-100", existingCase);
+
+		CaseInstance updatedCase = repository.get("MATTER-100");
+		assertEquals(MatterType.HOURLY_RETAINER.getCode(), updatedCase.getMatterType());
+		assertEquals(BillingPartyModel.DIRECT_CLIENT.getCode(), updatedCase.getBillingPartyModel());
+		assertEquals(BillingMode.HOURLY_RETAINER.getCode(), updatedCase.getBillingMode());
+		assertEquals(AccountsPolicyProfile.HOURLY_RETAINER_PROFILE.getCode(), updatedCase.getAccountsProfile());
+		assertEquals(true, updatedCase.getBillingSetupComplete());
+		assertEquals("2500", updatedCase.getFlatFeeAmount());
+		assertEquals(true, updatedCase.getPaymentMethodAuthorized());
+		assertEquals("card-1", updatedCase.getPaymentMethodRef());
+		assertEquals("5000", updatedCase.getRetainerAmount());
+		assertEquals(true, updatedCase.getRetainerFundsReceived());
+		assertEquals("plan-1", updatedCase.getSubscriptionPlanId());
+		assertEquals("Monthly", updatedCase.getSubscriptionPlanName());
+		assertEquals(true, updatedCase.getSubscriptionActive());
+		assertEquals("firm-1", updatedCase.getInstructingFirmId());
+		assertEquals("Client Firm", updatedCase.getInstructingFirmName());
+		assertEquals(BillingMode.COUNSEL_RETAINER.getCode(), updatedCase.getCounselBillingMode());
+		assertEquals(false, updatedCase.getCounselBillingPartyOverride());
+		assertEquals(AccountsLifecycleStage.SETUP.getCode(), updatedCase.getAccountsStage());
+		assertEquals(AccountsState.AWAITING_RETAINER_FUNDING.getCode(), updatedCase.getAccountsState());
+		assertEquals(AccountsHealth.AMBER.getCode(), updatedCase.getAccountsHealth());
+		assertEquals(List.of(AccountsHealthReasonCode.MISSING_RETAINER.getCode()),
+				updatedCase.getAccountsHealthReasonCodes());
+		assertEquals("2026-05-02T10:15:30-04:00", updatedCase.getAccountsHealthEvaluatedAt());
+		assertEquals("2026-05-02T10:15:30-04:00", updatedCase.getAccountsStaleSince());
+		assertEquals(false, updatedCase.getAccountsMalformedCase());
+		assertEquals(AccountsReadinessStatus.READY.getCode(), updatedCase.getAccountsReadinessStatus());
+		assertEquals(List.of(), updatedCase.getAccountsReadinessReasonCodes());
+		assertEquals("2026-05-02T10:16:30-04:00", updatedCase.getAccountsReadinessEvaluatedAt());
+		assertEquals("Accounts setup is ready for administrative opening", updatedCase.getAccountsReadinessSummary());
+		assertEquals(AccountsWorkQueue.ACCOUNTS_READY, updatedCase.getAccountsQueueId());
+		assertEquals(AccountsWorkOwnerType.ACCOUNTS.getCode(), updatedCase.getAccountsNextActionOwnerType());
+		assertEquals("Accounts setup is ready for administrative opening", updatedCase.getAccountsNextActionSummary());
+		assertEquals("2026-05-05", updatedCase.getAccountsNextActionDueAt());
+		assertEquals(false, updatedCase.getAccountsWorkBlocked());
+		assertEquals(AccountsWorkPriority.NORMAL.getCode(), updatedCase.getAccountsWorkPriority());
+		assertEquals(1, updatedCase.getAccountsEvents().size());
+		assertEquals(AccountsEventType.ACCOUNTS_INITIALIZED.getCode(),
+				updatedCase.getAccountsEvents().get(0).getEventType());
+	}
+
+	@Test
+	public void shouldFilterAccountsWorkByQueueOwnerDueAndReason() throws Exception {
+		CaseInstance existingCase = repository.get("MATTER-100");
+		existingCase.setAccountsReadinessStatus(AccountsReadinessStatus.NOT_READY.getCode());
+		existingCase.setAccountsQueueId(AccountsWorkQueue.MISSING_RETAINER);
+		existingCase.setAccountsNextActionOwnerType(AccountsWorkOwnerType.ACCOUNTS.getCode());
+		existingCase.setAccountsNextActionDueAt("2026-05-05");
+		existingCase.setAccountsWorkBlocked(false);
+		existingCase.setAccountsReadinessReasonCodes(List.of(AccountsHealthReasonCode.MISSING_RETAINER.getCode()));
+		repository.update("MATTER-100", existingCase);
+
+		CaseInstanceFilter filter = CaseInstanceFilter.builder().status(java.util.Optional.empty())
+				.caseDefsId(java.util.Optional.empty()).adminState(java.util.Optional.empty())
+				.adminHealth(java.util.Optional.empty()).nextActionOwnerType(java.util.Optional.empty())
+				.queueId(java.util.Optional.empty()).malformedCase(java.util.Optional.empty())
+				.exceptionOnly(java.util.Optional.empty()).adminOwnerId(java.util.Optional.empty())
+				.responsibleLawyerId(java.util.Optional.empty()).healthReasonCode(java.util.Optional.empty())
+				.matterType(java.util.Optional.empty())
+				.accountsReadinessStatus(java.util.Optional.of(AccountsReadinessStatus.NOT_READY.getCode()))
+				.accountsQueueId(java.util.Optional.of(AccountsWorkQueue.MISSING_RETAINER))
+				.accountsNextActionOwnerType(java.util.Optional.of(AccountsWorkOwnerType.ACCOUNTS.getCode()))
+				.accountsNextActionDueBefore(java.util.Optional.of("2026-05-06"))
+				.accountsWorkBlocked(java.util.Optional.of(false))
+				.accountsReadinessReasonCode(java.util.Optional.of(AccountsHealthReasonCode.MISSING_RETAINER.getCode()))
+				.cursor(Cursor.empty()).dir(org.springframework.data.domain.Sort.Direction.ASC).limit(10).build();
+
+		PageResult<CaseInstance> results = repository.find(filter);
+
 		assertEquals(1, results.size());
 		assertEquals("MATTER-100", results.first().getBusinessKey());
 	}

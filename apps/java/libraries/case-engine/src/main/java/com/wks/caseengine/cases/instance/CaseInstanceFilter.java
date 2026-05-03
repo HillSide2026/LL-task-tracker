@@ -20,6 +20,7 @@ import com.wks.caseengine.pagination.Cursor;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Builder.Default;
 import lombok.Getter;
 
 @Getter
@@ -27,17 +28,44 @@ import lombok.Getter;
 @AllArgsConstructor
 public class CaseInstanceFilter {
 
-	private Optional<CaseStatus> status;
-	private Optional<String> caseDefsId;
-	private Optional<String> adminState;
-	private Optional<String> adminHealth;
-	private Optional<String> nextActionOwnerType;
-	private Optional<String> queueId;
-	private Optional<Boolean> malformedCase;
-	private Optional<Boolean> exceptionOnly;
-	private Optional<String> adminOwnerId;
-	private Optional<String> responsibleLawyerId;
-	private Optional<String> healthReasonCode;
+	@Default
+	private Optional<CaseStatus> status = Optional.empty();
+	@Default
+	private Optional<String> caseDefsId = Optional.empty();
+	@Default
+	private Optional<String> adminState = Optional.empty();
+	@Default
+	private Optional<String> adminHealth = Optional.empty();
+	@Default
+	private Optional<String> nextActionOwnerType = Optional.empty();
+	@Default
+	private Optional<String> queueId = Optional.empty();
+	@Default
+	private Optional<Boolean> malformedCase = Optional.empty();
+	@Default
+	private Optional<Boolean> exceptionOnly = Optional.empty();
+	@Default
+	private Optional<String> adminOwnerId = Optional.empty();
+	@Default
+	private Optional<String> responsibleLawyerId = Optional.empty();
+	@Default
+	private Optional<String> healthReasonCode = Optional.empty();
+	@Default
+	private Optional<String> matterType = Optional.empty();
+	@Default
+	private Optional<String> accountsReadinessStatus = Optional.empty();
+	@Default
+	private Optional<String> accountsQueueId = Optional.empty();
+	@Default
+	private Optional<String> accountsNextActionOwnerType = Optional.empty();
+	@Default
+	private Optional<String> accountsNextActionDueBefore = Optional.empty();
+	@Default
+	private Optional<Boolean> accountsWorkBlocked = Optional.empty();
+	@Default
+	private Optional<String> accountsReadinessReasonCode = Optional.empty();
+	@Default
+	private Optional<Boolean> accountsWorkOnly = Optional.empty();
 	private Direction dir;
 	private Integer limit;
 	private Cursor cursor;
@@ -66,6 +94,14 @@ public class CaseInstanceFilter {
 		this.adminOwnerId = Optional.ofNullable(adminOwnerId);
 		this.responsibleLawyerId = Optional.ofNullable(responsibleLawyerId);
 		this.healthReasonCode = Optional.ofNullable(healthReasonCode);
+		this.matterType = Optional.empty();
+		this.accountsReadinessStatus = Optional.empty();
+		this.accountsQueueId = Optional.empty();
+		this.accountsNextActionOwnerType = Optional.empty();
+		this.accountsNextActionDueBefore = Optional.empty();
+		this.accountsWorkBlocked = Optional.empty();
+		this.accountsReadinessReasonCode = Optional.empty();
+		this.accountsWorkOnly = Optional.empty();
 	}
 
 	private Integer parseInt(String limit) {

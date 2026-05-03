@@ -38,6 +38,18 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import com.wks.caseengine.cases.instance.CaseInstance;
 import com.wks.caseengine.cases.instance.CaseInstanceFilter;
 import com.wks.caseengine.cases.instance.CaseInstanceNotFoundException;
+import com.wks.caseengine.cases.instance.accounts.AccountsEvent;
+import com.wks.caseengine.cases.instance.accounts.AccountsEventType;
+import com.wks.caseengine.cases.instance.accounts.AccountsLifecycleException;
+import com.wks.caseengine.cases.instance.accounts.AccountsLifecycleStage;
+import com.wks.caseengine.cases.instance.accounts.AccountsReadinessEvaluation;
+import com.wks.caseengine.cases.instance.accounts.AccountsReadinessStatus;
+import com.wks.caseengine.cases.instance.accounts.AccountsState;
+import com.wks.caseengine.cases.instance.accounts.AccountsWorkOwnerType;
+import com.wks.caseengine.cases.instance.accounts.AccountsWorkQueue;
+import com.wks.caseengine.cases.instance.accounts.AccountsWorkSummary;
+import com.wks.caseengine.cases.instance.accounts.BillingMode;
+import com.wks.caseengine.cases.instance.accounts.MatterType;
 import com.wks.caseengine.cases.instance.admin.AdminLifecycleException;
 import com.wks.caseengine.cases.instance.admin.AdminLifecycleSupport;
 import com.wks.caseengine.cases.instance.admin.AdminState;
@@ -184,6 +196,135 @@ public class CaseInstanceServiceImplTest {
 						&& caseInstance.getAdminHealth() != null));
 		assertEquals(AdminState.OPENED.getCode(), result.first().getAdminState());
 		assertEquals("Opening", result.first().getStage());
+	}
+
+	@Test
+	void shouldGetAccountsAndPersistShellStateWhenMissing() throws Exception {
+		setJwtSecurityContext("accounts-sub", List.of("accounts_manager"));
+		when(commandExecutor.execute(Mockito.any(GetCaseInstanceCmd.class)))
+				.thenReturn(CaseInstance.builder().businessKey("BK-1").build());
+
+		CaseInstance result = service.getAccounts("BK-1");
+
+		verify(repository).update(Mockito.eq("BK-1"), Mockito.argThat(caseInstance ->
+				AccountsLifecycleStage.SETUP.getCode().equals(caseInstance.getAccountsStage())
+						&& AccountsState.AWAITING_BILLING_SETUP.getCode().equals(caseInstance.getAccountsState())
+						&& caseInstance.getAccountsEvents().size() == 1));
+		assertEquals(AccountsLifecycleStage.SETUP.getCode(), result.getAccountsStage());
+		assertEquals(AccountsState.AWAITING_BILLING_SETUP.getCode(), result.getAccountsState());
+		assertEquals(AccountsEventType.ACCOUNTS_INITIALIZED.getCode(), result.getAccountsEvents().get(0).getEventType());
+	}
+
+	@Test
+	void shouldReturnAccountsHistoryEvents() {
+		setJwtSecurityContext("accounts-sub", List.of("billing_user"));
+		AccountsEvent existingEvent = AccountsEvent.builder().eventType(AccountsEventType.ACCOUNTS_INITIALIZED.getCode())
+				.toState(AccountsState.AWAITING_BILLING_SETUP.getCode()).build();
+		when(commandExecutor.execute(Mockito.any(GetCaseInstanceCmd.class)))
+				.thenReturn(CaseInstance.builder().businessKey("BK-1").accountsStage(AccountsLifecycleStage.SETUP.getCode())
+						.accountsState(AccountsState.AWAITING_BILLING_SETUP.getCode())
+						.accountsEvents(List.of(existingEvent)).build());
+
+		List<AccountsEvent> history = service.getAccountsHistory("BK-1");
+
+		assertEquals(1, history.size());
+		assertEquals(AccountsEventType.ACCOUNTS_INITIALIZED.getCode(), history.get(0).getEventType());
+	}
+
+	@Test
+	void shouldRejectAccountsViewForUnauthorizedRole() {
+		setJwtSecurityContext("client-sub", List.of("client_case"));
+
+		assertThrows(AccountsLifecycleException.class, () -> service.getAccounts("BK-1"));
+	}
+
+	@Test
+	void shouldReturnStoredAccountsReadiness() {
+		setJwtSecurityContext("accounts-sub", List.of("accounts_manager"));
+		when(commandExecutor.execute(Mockito.any(GetCaseInstanceCmd.class))).thenReturn(CaseInstance.builder()
+				.businessKey("BK-1").accountsState(AccountsState.AWAITING_BILLING_SETUP.getCode())
+				.accountsReadinessStatus(AccountsReadinessStatus.NOT_READY.getCode())
+				.accountsReadinessSummary("Accounts setup is incomplete").build());
+
+		AccountsReadinessEvaluation readiness = service.getAccountsReadiness("BK-1");
+
+		assertEquals(AccountsReadinessStatus.NOT_READY.getCode(), readiness.getAccountsReadinessStatus());
+	}
+
+	@Test
+	void shouldEvaluateAndPersistAccountsReadiness() throws Exception {
+		setJwtSecurityContext("accounts-sub", List.of("accounts_manager"));
+		when(commandExecutor.execute(Mockito.any(GetCaseInstanceCmd.class))).thenReturn(CaseInstance.builder()
+				.businessKey("BK-1").matterType(MatterType.FLAT_FEE.getCode()).billingSetupComplete(true)
+				.flatFeeAmount("2500").billingMode(BillingMode.FLAT_FEE.getCode()).build());
+
+		AccountsReadinessEvaluation readiness = service.evaluateAccountsReadiness("BK-1");
+
+		assertEquals(AccountsReadinessStatus.READY.getCode(), readiness.getAccountsReadinessStatus());
+		verify(repository).update(Mockito.eq("BK-1"), Mockito.argThat(caseInstance ->
+				AccountsReadinessStatus.READY.getCode().equals(caseInstance.getAccountsReadinessStatus())));
+	}
+
+	@Test
+	void shouldReturnAccountsWork() {
+		setJwtSecurityContext("accounts-sub", List.of("accounts_manager"));
+		PageResult<CaseInstance> pageResult = PageResult.<CaseInstance>builder()
+				.content(List.of(CaseInstance.builder().businessKey("BK-1")
+						.accountsQueueId(AccountsWorkQueue.MISSING_RETAINER).build()))
+				.build();
+		when(repository.find(Mockito.any(CaseInstanceFilter.class))).thenReturn(pageResult);
+
+		PageResult<CaseInstance> result = service.findAccountsWork(CaseInstanceFilter.builder()
+				.status(java.util.Optional.empty()).caseDefsId(java.util.Optional.empty())
+				.adminState(java.util.Optional.empty()).adminHealth(java.util.Optional.empty())
+				.nextActionOwnerType(java.util.Optional.empty()).queueId(java.util.Optional.empty())
+				.malformedCase(java.util.Optional.empty()).exceptionOnly(java.util.Optional.empty())
+				.adminOwnerId(java.util.Optional.empty()).responsibleLawyerId(java.util.Optional.empty())
+				.healthReasonCode(java.util.Optional.empty()).matterType(java.util.Optional.empty())
+				.accountsReadinessStatus(java.util.Optional.empty()).accountsQueueId(java.util.Optional.empty())
+				.accountsNextActionOwnerType(java.util.Optional.empty())
+				.accountsNextActionDueBefore(java.util.Optional.empty()).accountsWorkBlocked(java.util.Optional.empty())
+				.accountsReadinessReasonCode(java.util.Optional.empty()).cursor(Cursor.empty())
+				.dir(org.springframework.data.domain.Sort.Direction.ASC).limit(10).build());
+
+		assertEquals(1, result.size());
+		assertEquals(AccountsWorkQueue.MISSING_RETAINER, result.first().getAccountsQueueId());
+	}
+
+	@Test
+	void shouldSummarizeAccountsWorkAcrossMatters() {
+		setJwtSecurityContext("accounts-sub", List.of("accounts_manager"));
+		when(repository.find(Mockito.any(CaseInstanceFilter.class))).thenReturn(PageResult.<CaseInstance>builder()
+				.content(List.of(
+						CaseInstance.builder().businessKey("BK-1").accountsQueueId(AccountsWorkQueue.MISSING_RETAINER)
+								.accountsNextActionOwnerType(AccountsWorkOwnerType.ACCOUNTS.getCode())
+								.accountsReadinessStatus(AccountsReadinessStatus.NOT_READY.getCode())
+								.accountsNextActionDueAt("2000-01-01").accountsWorkBlocked(false).build(),
+						CaseInstance.builder().businessKey("BK-2")
+								.accountsQueueId(AccountsWorkQueue.MALFORMED_ACCOUNTS_CONFIGURATION)
+								.accountsNextActionOwnerType(AccountsWorkOwnerType.SYSTEM.getCode())
+								.accountsReadinessStatus(AccountsReadinessStatus.BLOCKED.getCode())
+								.accountsWorkBlocked(true).build()))
+				.build());
+
+		AccountsWorkSummary summary = service.getAccountsWorkSummary(CaseInstanceFilter.builder()
+				.status(java.util.Optional.empty()).caseDefsId(java.util.Optional.empty())
+				.adminState(java.util.Optional.empty()).adminHealth(java.util.Optional.empty())
+				.nextActionOwnerType(java.util.Optional.empty()).queueId(java.util.Optional.empty())
+				.malformedCase(java.util.Optional.empty()).exceptionOnly(java.util.Optional.empty())
+				.adminOwnerId(java.util.Optional.empty()).responsibleLawyerId(java.util.Optional.empty())
+				.healthReasonCode(java.util.Optional.empty()).matterType(java.util.Optional.empty())
+				.accountsReadinessStatus(java.util.Optional.empty()).accountsQueueId(java.util.Optional.empty())
+				.accountsNextActionOwnerType(java.util.Optional.empty())
+				.accountsNextActionDueBefore(java.util.Optional.empty()).accountsWorkBlocked(java.util.Optional.empty())
+				.accountsReadinessReasonCode(java.util.Optional.empty()).cursor(Cursor.empty())
+				.dir(org.springframework.data.domain.Sort.Direction.ASC).limit(10).build());
+
+		assertEquals(2, summary.getTotal());
+		assertEquals(1, summary.getBlocked());
+		assertEquals(1, summary.getDueOrOverdue());
+		assertEquals(1, summary.getByQueue().get(AccountsWorkQueue.MISSING_RETAINER));
+		assertEquals(1, summary.getByOwner().get(AccountsWorkOwnerType.SYSTEM.getCode()));
 	}
 
 	private void setJwtSecurityContext(String sub, List<String> roles) {

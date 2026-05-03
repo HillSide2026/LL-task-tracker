@@ -17,6 +17,9 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import com.wks.caseengine.cases.instance.accounts.AccountsLifecycleException;
+import com.wks.caseengine.cases.instance.admin.AdminLifecycleException;
+
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -35,7 +38,16 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(RestInvalidArgumentException.class)
 	public ResponseEntity<ErrorResponse> handleIllegalArgumentException(RestInvalidArgumentException ex) {
-		ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getMessage());
+		ErrorResponse errorResponse;
+		if (ex.getCause() instanceof AccountsLifecycleException accountsException) {
+			errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getMessage(),
+					accountsException.getReasonCodes());
+		} else if (ex.getCause() instanceof AdminLifecycleException adminException) {
+			errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getMessage(),
+					adminException.getReasonCodes());
+		} else {
+			errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.getReasonPhrase(), ex.getMessage());
+		}
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
 	}
 

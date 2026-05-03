@@ -11,7 +11,8 @@
  */
 package com.wks.caseengine.rest.exception;
 
-import lombok.AllArgsConstructor;
+import java.util.List;
+
 import lombok.Getter;
 
 /**
@@ -19,10 +20,19 @@ import lombok.Getter;
  *
  */
 @Getter
-@AllArgsConstructor
 public class ErrorResponse {
 
 	private final String error;
 	private final String errorMessage;
+	private final List<String> reasonCodes;
 
+	public ErrorResponse(String error, String errorMessage) {
+		this(error, errorMessage, List.of());
+	}
+
+	public ErrorResponse(String error, String errorMessage, List<String> reasonCodes) {
+		this.error = error;
+		this.errorMessage = errorMessage;
+		this.reasonCodes = reasonCodes != null ? List.copyOf(reasonCodes) : List.of();
+	}
 }

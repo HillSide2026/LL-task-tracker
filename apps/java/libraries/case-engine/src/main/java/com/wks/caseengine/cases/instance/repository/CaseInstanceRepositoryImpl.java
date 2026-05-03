@@ -78,6 +78,18 @@ public class CaseInstanceRepositoryImpl implements CaseInstanceRepository {
 			filters.getAdminOwnerId().ifPresent(a -> c.add(Criteria.where("adminOwnerId").is(a)));
 			filters.getResponsibleLawyerId().ifPresent(a -> c.add(Criteria.where("responsibleLawyerId").is(a)));
 			filters.getHealthReasonCode().ifPresent(a -> c.add(Criteria.where("healthReasonCodes").in(a)));
+			filters.getMatterType().ifPresent(a -> c.add(Criteria.where("matterType").is(a)));
+			filters.getAccountsReadinessStatus().ifPresent(a -> c.add(Criteria.where("accountsReadinessStatus").is(a)));
+			filters.getAccountsQueueId().ifPresent(a -> c.add(Criteria.where("accountsQueueId").is(a)));
+			filters.getAccountsNextActionOwnerType()
+					.ifPresent(a -> c.add(Criteria.where("accountsNextActionOwnerType").is(a)));
+			filters.getAccountsNextActionDueBefore()
+					.ifPresent(a -> c.add(Criteria.where("accountsNextActionDueAt").lte(a)));
+			filters.getAccountsWorkBlocked().ifPresent(a -> c.add(Criteria.where("accountsWorkBlocked").is(a)));
+			filters.getAccountsReadinessReasonCode()
+					.ifPresent(a -> c.add(Criteria.where("accountsReadinessReasonCodes").in(a)));
+			filters.getAccountsWorkOnly().filter(Boolean::booleanValue)
+					.ifPresent(a -> c.add(Criteria.where("accountsQueueId").exists(true).ne(null)));
 		});
 
 		PageResult<CaseInstance> results = pagination.executeQuery(args, CaseInstance.class);
@@ -130,6 +142,41 @@ public class CaseInstanceRepositoryImpl implements CaseInstanceRepository {
 				Updates.set("resumeToState", caseInstance.getResumeToState()),
 				Updates.set("lastStateChangedAt", caseInstance.getLastStateChangedAt()),
 				Updates.set("openedAt", caseInstance.getOpenedAt()),
+				Updates.set("matterType", caseInstance.getMatterType()),
+				Updates.set("billingPartyModel", caseInstance.getBillingPartyModel()),
+				Updates.set("billingMode", caseInstance.getBillingMode()),
+				Updates.set("accountsProfile", caseInstance.getAccountsProfile()),
+				Updates.set("billingSetupComplete", caseInstance.getBillingSetupComplete()),
+				Updates.set("flatFeeAmount", caseInstance.getFlatFeeAmount()),
+				Updates.set("paymentMethodAuthorized", caseInstance.getPaymentMethodAuthorized()),
+				Updates.set("paymentMethodRef", caseInstance.getPaymentMethodRef()),
+				Updates.set("retainerAmount", caseInstance.getRetainerAmount()),
+				Updates.set("retainerFundsReceived", caseInstance.getRetainerFundsReceived()),
+				Updates.set("subscriptionPlanId", caseInstance.getSubscriptionPlanId()),
+				Updates.set("subscriptionPlanName", caseInstance.getSubscriptionPlanName()),
+				Updates.set("subscriptionActive", caseInstance.getSubscriptionActive()),
+				Updates.set("instructingFirmId", caseInstance.getInstructingFirmId()),
+				Updates.set("instructingFirmName", caseInstance.getInstructingFirmName()),
+				Updates.set("counselBillingMode", caseInstance.getCounselBillingMode()),
+				Updates.set("counselBillingPartyOverride", caseInstance.getCounselBillingPartyOverride()),
+				Updates.set("accountsStage", caseInstance.getAccountsStage()),
+				Updates.set("accountsState", caseInstance.getAccountsState()),
+				Updates.set("accountsHealth", caseInstance.getAccountsHealth()),
+				Updates.set("accountsHealthReasonCodes", caseInstance.getAccountsHealthReasonCodes()),
+				Updates.set("accountsHealthEvaluatedAt", caseInstance.getAccountsHealthEvaluatedAt()),
+				Updates.set("accountsStaleSince", caseInstance.getAccountsStaleSince()),
+				Updates.set("accountsMalformedCase", caseInstance.getAccountsMalformedCase()),
+				Updates.set("accountsReadinessStatus", caseInstance.getAccountsReadinessStatus()),
+				Updates.set("accountsReadinessReasonCodes", caseInstance.getAccountsReadinessReasonCodes()),
+				Updates.set("accountsReadinessEvaluatedAt", caseInstance.getAccountsReadinessEvaluatedAt()),
+				Updates.set("accountsReadinessSummary", caseInstance.getAccountsReadinessSummary()),
+				Updates.set("accountsQueueId", caseInstance.getAccountsQueueId()),
+				Updates.set("accountsNextActionOwnerType", caseInstance.getAccountsNextActionOwnerType()),
+				Updates.set("accountsNextActionSummary", caseInstance.getAccountsNextActionSummary()),
+				Updates.set("accountsNextActionDueAt", caseInstance.getAccountsNextActionDueAt()),
+				Updates.set("accountsWorkBlocked", caseInstance.getAccountsWorkBlocked()),
+				Updates.set("accountsWorkPriority", caseInstance.getAccountsWorkPriority()),
+				Updates.set("accountsEvents", caseInstance.getAccountsEvents()),
 				Updates.set("adminEvents", caseInstance.getAdminEvents()));
 
 		CaseInstance updatedCaseInstance = getCollection().findOneAndUpdate(filter, update);

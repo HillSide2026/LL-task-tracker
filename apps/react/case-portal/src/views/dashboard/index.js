@@ -1,4 +1,5 @@
 import { Grid, Typography } from '@mui/material'
+import { AdminWorkViews } from 'common/adminLifecycle'
 import DashboardCard from 'components/cards/DashboardCard'
 import {
   IconAlertTriangle,
@@ -10,8 +11,33 @@ import {
 } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
 
+const workViewIcons = {
+  'admin-onboarding-intake': <IconChecklist />,
+  'admin-opening-lawyer': <IconScale />,
+  'admin-opening-exceptions': <IconAlertTriangle />,
+  'admin-maintenance-active': <IconArchive />,
+  'admin-maintenance-client-waiting': <IconChecklist />,
+  'admin-maintenance-external-waiting': <IconSquareAsterisk />,
+  'admin-maintenance-lawyer-response': <IconScale />,
+  'admin-maintenance-exceptions': <IconAlertTriangle />,
+}
+
+const dashboardWorkViewIds = [
+  'admin-onboarding-intake',
+  'admin-opening-lawyer',
+  'admin-opening-exceptions',
+  'admin-maintenance-active',
+  'admin-maintenance-client-waiting',
+  'admin-maintenance-external-waiting',
+  'admin-maintenance-lawyer-response',
+  'admin-maintenance-exceptions',
+]
+
 const DashboardDefault = () => {
   const { t } = useTranslation()
+  const dashboardWorkViews = AdminWorkViews.filter((workView) =>
+    dashboardWorkViewIds.includes(workView.id),
+  )
 
   return (
     <Grid container rowSpacing={4.5} columnSpacing={2.75}>
@@ -40,90 +66,16 @@ const DashboardDefault = () => {
           to='/task-list'
         />
       </Grid>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <DashboardCard
-          title='Intake Queue'
-          icon={<IconChecklist />}
-          to='/case-list/admin-opening/intake'
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <DashboardCard
-          title='Lawyer Review'
-          icon={<IconScale />}
-          to='/case-list/admin-opening/lawyer-review'
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <DashboardCard
-          title='Opened Matters'
-          icon={<IconArchive />}
-          to='/case-list/admin-opening/opened'
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <DashboardCard
-          title='Exceptions'
-          icon={<IconAlertTriangle />}
-          to='/case-list/admin-opening/exceptions'
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <DashboardCard
-          title='Active Matters'
-          icon={<IconArchive />}
-          to='/case-list/admin-maintenance/active'
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <DashboardCard
-          title='Client Waiting'
-          icon={<IconChecklist />}
-          to='/case-list/admin-maintenance/client-waiting'
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <DashboardCard
-          title='External Waiting'
-          icon={<IconSquareAsterisk />}
-          to='/case-list/admin-maintenance/external-waiting'
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <DashboardCard
-          title='Lawyer Response'
-          icon={<IconScale />}
-          to='/case-list/admin-maintenance/lawyer-response'
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <DashboardCard
-          title='Maintenance Exceptions'
-          icon={<IconAlertTriangle />}
-          to='/case-list/admin-maintenance/exceptions'
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <DashboardCard
-          title='Closing Review'
-          icon={<IconChecklist />}
-          to='/case-list/admin-closing/review'
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <DashboardCard
-          title='Closed Matters'
-          icon={<IconArchive />}
-          to='/case-list/admin-closing/closed'
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <DashboardCard
-          title='Archived Matters'
-          icon={<IconSquareAsterisk />}
-          to='/case-list/admin-archive/archived'
-        />
-      </Grid>
+      {dashboardWorkViews.map((workView) => (
+        <Grid item xs={12} sm={6} md={4} lg={3} key={workView.id}>
+          <DashboardCard
+            title={workView.title}
+            subtitle={`${workView.stage} work view`}
+            icon={workViewIcons[workView.id] || <IconList />}
+            to={workView.url}
+          />
+        </Grid>
+      ))}
 
       <Grid
         item

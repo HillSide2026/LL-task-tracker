@@ -1,5 +1,10 @@
 /* eslint-disable no-undef */
-import { AdminState, getAdminStateLabel } from './adminLifecycle'
+import {
+  AdminLifecycleStages,
+  AdminState,
+  getAdminStateLabel,
+  getAdminWorkViewsByStage,
+} from './adminLifecycle'
 
 test('maps legacy and maintenance admin states to display labels', () => {
   expect(getAdminStateLabel('Open')).toEqual(AdminState.Opened)
@@ -14,4 +19,23 @@ test('maps legacy and maintenance admin states to display labels', () => {
     AdminState.ClosingReview,
   )
   expect(getAdminStateLabel(AdminState.Archived)).toEqual(AdminState.Archived)
+})
+
+test('keeps admin stages fixed and treats queues as stage-scoped work views', () => {
+  expect(AdminLifecycleStages).toEqual([
+    'Onboarding',
+    'Opening',
+    'Maintenance',
+    'Closing',
+    'Archived',
+  ])
+
+  expect(
+    getAdminWorkViewsByStage('Opening').map((workView) => workView.title),
+  ).toEqual([
+    'Ready to Open',
+    'Ready for Lawyer',
+    'Waiting on Client',
+    'Opening Exceptions',
+  ])
 })

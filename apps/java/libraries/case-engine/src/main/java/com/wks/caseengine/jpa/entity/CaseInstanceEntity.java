@@ -6,7 +6,9 @@ import com.wks.caseengine.cases.instance.CaseAttribute;
 import com.wks.caseengine.cases.instance.CaseComment;
 import com.wks.caseengine.cases.instance.CaseDocument;
 import com.wks.caseengine.cases.instance.CaseOwner;
+import com.wks.caseengine.cases.instance.accounts.AccountsEvent;
 import com.wks.caseengine.cases.instance.admin.AdminEvent;
+import com.wks.caseengine.jpa.entity.converter.AccountsEventListConverter;
 import com.wks.caseengine.jpa.entity.converter.AdminEventListConverter;
 import com.wks.caseengine.jpa.entity.converter.CaseCommentListConverter;
 import com.wks.caseengine.jpa.entity.converter.CaseDefAttributeConverter;
@@ -112,6 +114,114 @@ public class CaseInstanceEntity {
 
 	@Column(name = "opened_at")
 	private String openedAt;
+
+	@Column(name = "matter_type")
+	private String matterType;
+
+	@Column(name = "billing_party_model")
+	private String billingPartyModel;
+
+	@Column(name = "billing_mode")
+	private String billingMode;
+
+	@Column(name = "accounts_profile")
+	private String accountsProfile;
+
+	@Column(name = "billing_setup_complete")
+	private Boolean billingSetupComplete;
+
+	@Column(name = "flat_fee_amount")
+	private String flatFeeAmount;
+
+	@Column(name = "payment_method_authorized")
+	private Boolean paymentMethodAuthorized;
+
+	@Column(name = "payment_method_ref")
+	private String paymentMethodRef;
+
+	@Column(name = "retainer_amount")
+	private String retainerAmount;
+
+	@Column(name = "retainer_funds_received")
+	private Boolean retainerFundsReceived;
+
+	@Column(name = "subscription_plan_id")
+	private String subscriptionPlanId;
+
+	@Column(name = "subscription_plan_name")
+	private String subscriptionPlanName;
+
+	@Column(name = "subscription_active")
+	private Boolean subscriptionActive;
+
+	@Column(name = "instructing_firm_id")
+	private String instructingFirmId;
+
+	@Column(name = "instructing_firm_name")
+	private String instructingFirmName;
+
+	@Column(name = "counsel_billing_mode")
+	private String counselBillingMode;
+
+	@Column(name = "counsel_billing_party_override")
+	private Boolean counselBillingPartyOverride;
+
+	@Column(name = "accounts_stage")
+	private String accountsStage;
+
+	@Column(name = "accounts_state")
+	private String accountsState;
+
+	@Column(name = "accounts_health")
+	private String accountsHealth;
+
+	@Column(name = "accounts_health_reason_codes", columnDefinition = "TEXT")
+	@Convert(converter = StringListConverter.class)
+	private List<String> accountsHealthReasonCodes;
+
+	@Column(name = "accounts_health_evaluated_at")
+	private String accountsHealthEvaluatedAt;
+
+	@Column(name = "accounts_stale_since")
+	private String accountsStaleSince;
+
+	@Column(name = "accounts_malformed_case")
+	private Boolean accountsMalformedCase;
+
+	@Column(name = "accounts_readiness_status")
+	private String accountsReadinessStatus;
+
+	@Column(name = "accounts_readiness_reason_codes", columnDefinition = "TEXT")
+	@Convert(converter = StringListConverter.class)
+	private List<String> accountsReadinessReasonCodes;
+
+	@Column(name = "accounts_readiness_evaluated_at")
+	private String accountsReadinessEvaluatedAt;
+
+	@Column(name = "accounts_readiness_summary", columnDefinition = "TEXT")
+	private String accountsReadinessSummary;
+
+	@Column(name = "accounts_queue_id")
+	private String accountsQueueId;
+
+	@Column(name = "accounts_next_action_owner_type")
+	private String accountsNextActionOwnerType;
+
+	@Column(name = "accounts_next_action_summary", columnDefinition = "TEXT")
+	private String accountsNextActionSummary;
+
+	@Column(name = "accounts_next_action_due_at")
+	private String accountsNextActionDueAt;
+
+	@Column(name = "accounts_work_blocked")
+	private Boolean accountsWorkBlocked;
+
+	@Column(name = "accounts_work_priority")
+	private String accountsWorkPriority;
+
+	@Column(name = "accounts_events", columnDefinition = "TEXT")
+	@Convert(converter = AccountsEventListConverter.class)
+	private List<AccountsEvent> accountsEvents;
 
 	@Column(name = "admin_events", columnDefinition = "TEXT")
 	@Convert(converter = AdminEventListConverter.class)

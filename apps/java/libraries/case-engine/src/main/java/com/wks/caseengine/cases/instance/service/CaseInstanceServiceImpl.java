@@ -12,6 +12,8 @@
 package com.wks.caseengine.cases.instance.service;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -22,6 +24,15 @@ import com.wks.caseengine.cases.instance.CaseDocument;
 import com.wks.caseengine.cases.instance.CaseInstance;
 import com.wks.caseengine.cases.instance.CaseInstanceFilter;
 import com.wks.caseengine.cases.instance.CaseInstanceNotFoundException;
+import com.wks.caseengine.cases.instance.accounts.AccountsEvent;
+import com.wks.caseengine.cases.instance.accounts.AccountsLifecycleAccessSupport;
+import com.wks.caseengine.cases.instance.accounts.AccountsLifecycleSupport;
+import com.wks.caseengine.cases.instance.accounts.AccountsReadinessEvaluation;
+import com.wks.caseengine.cases.instance.accounts.AccountsReadinessStatus;
+import com.wks.caseengine.cases.instance.accounts.AccountsReadinessSupport;
+import com.wks.caseengine.cases.instance.accounts.AccountsTransition;
+import com.wks.caseengine.cases.instance.accounts.AccountsTransitionRequest;
+import com.wks.caseengine.cases.instance.accounts.AccountsWorkSummary;
 import com.wks.caseengine.cases.instance.admin.AdminLifecycleAccessSupport;
 import com.wks.caseengine.cases.instance.admin.AdminLifecycleSupport;
 import com.wks.caseengine.cases.instance.admin.AdminTransition;
@@ -36,6 +47,7 @@ import com.wks.caseengine.cases.instance.command.PatchCaseInstanceCmd;
 import com.wks.caseengine.cases.instance.command.SaveCaseInstanceWithValuesCmd;
 import com.wks.caseengine.cases.instance.command.StartCaseInstanceWithValuesCmd;
 import com.wks.caseengine.cases.instance.command.TransitionCaseAdminCmd;
+import com.wks.caseengine.cases.instance.command.TransitionCaseAccountsCmd;
 import com.wks.caseengine.cases.instance.command.UpdateCaseInstanceCommentCmd;
 import com.wks.caseengine.command.CommandExecutor;
 import com.wks.caseengine.pagination.PageResult;
@@ -95,6 +107,121 @@ public class CaseInstanceServiceImpl implements CaseInstanceService {
 			final AdminTransitionRequest request) {
 		assertCanAccessCase(businessKey);
 		return commandExecutor.execute(new TransitionCaseAdminCmd(businessKey, transition, request));
+	}
+
+	@Override
+	@Transactional
+	public CaseInstance getAccounts(final String businessKey) {
+		AccountsLifecycleAccessSupport.assertCanView();
+		CaseInstance caseInstance = commandExecutor.execute(new GetCaseInstanceCmd(businessKey));
+		if (AccountsLifecycleSupport.initializeShellIfMissing(caseInstance, AccountsTransitionRequest.builder().build())) {
+			try {
+				caseInstanceRepository.update(businessKey, caseInstance);
+			} catch (Exception e) {
+				throw new CaseInstanceNotFoundException("CaseInstance not found for businessKey " + businessKey, e);
+			}
+		}
+		return caseInstance;
+	}
+
+	@Override
+	@Transactional
+	public List<AccountsEvent> getAccountsHistory(final String businessKey) {
+		CaseInstance caseInstance = getAccounts(businessKey);
+		return caseInstance.getAccountsEvents() != null ? caseInstance.getAccountsEvents() : List.of();
+	}
+
+	@Override
+	@Transactional
+	public AccountsReadinessEvaluation getAccountsReadiness(final String businessKey) {
+		CaseInstance caseInstance = getAccounts(businessKey);
+		if (caseInstance.getAccountsReadinessStatus() == null) {
+			return AccountsReadinessEvaluation.builder()
+					.accountsReadinessStatus(AccountsReadinessStatus.NOT_EVALUATED.getCode())
+					.accountsReadinessReasonCodes(List.of()).accountsReadinessSummary("Accounts readiness has not been evaluated")
+					.build();
+		}
+		return AccountsReadinessEvaluation.builder()
+				.accountsReadinessStatus(caseInstance.getAccountsReadinessStatus())
+				.accountsReadinessReasonCodes(caseInstance.getAccountsReadinessReasonCodes() != null
+						? caseInstance.getAccountsReadinessReasonCodes()
+						: List.of())
+				.accountsReadinessEvaluatedAt(caseInstance.getAccountsReadinessEvaluatedAt())
+				.accountsReadinessSummary(caseInstance.getAccountsReadinessSummary()).build();
+	}
+
+	@Override
+	@Transactional
+	public AccountsReadinessEvaluation evaluateAccountsReadiness(final String businessKey) {
+		AccountsLifecycleAccessSupport.assertCanView();
+		CaseInstance caseInstance = commandExecutor.execute(new GetCaseInstanceCmd(businessKey));
+		AccountsLifecycleSupport.initializeShellIfMissing(caseInstance, AccountsTransitionRequest.builder().build());
+		AccountsReadinessEvaluation evaluation = AccountsReadinessSupport.applyEvaluation(caseInstance);
+		try {
+			caseInstanceRepository.update(businessKey, caseInstance);
+		} catch (Exception e) {
+			throw new CaseInstanceNotFoundException("CaseInstance not found for businessKey " + businessKey, e);
+		}
+		return evaluation;
+	}
+
+	@Override
+	public PageResult<CaseInstance> findAccountsWork(CaseInstanceFilter filters) {
+		AccountsLifecycleAccessSupport.assertCanView();
+		return caseInstanceRepository.find(filters);
+	}
+
+	@Override
+	public AccountsWorkSummary getAccountsWorkSummary(CaseInstanceFilter filters) {
+		AccountsLifecycleAccessSupport.assertCanView();
+		CaseInstanceFilter summaryFilter = CaseInstanceFilter.builder()
+				.status(filters.getStatus()).caseDefsId(filters.getCaseDefsId()).adminState(filters.getAdminState())
+				.adminHealth(filters.getAdminHealth()).nextActionOwnerType(filters.getNextActionOwnerType())
+				.queueId(filters.getQueueId()).malformedCase(filters.getMalformedCase())
+				.exceptionOnly(filters.getExceptionOnly()).adminOwnerId(filters.getAdminOwnerId())
+				.responsibleLawyerId(filters.getResponsibleLawyerId()).healthReasonCode(filters.getHealthReasonCode())
+				.matterType(filters.getMatterType()).accountsReadinessStatus(filters.getAccountsReadinessStatus())
+				.accountsQueueId(filters.getAccountsQueueId())
+				.accountsNextActionOwnerType(filters.getAccountsNextActionOwnerType())
+				.accountsNextActionDueBefore(filters.getAccountsNextActionDueBefore())
+				.accountsWorkBlocked(filters.getAccountsWorkBlocked())
+				.accountsReadinessReasonCode(filters.getAccountsReadinessReasonCode())
+				.accountsWorkOnly(filters.getAccountsWorkOnly())
+				.cursor(com.wks.caseengine.pagination.Cursor.empty()).dir(org.springframework.data.domain.Sort.Direction.ASC)
+				.limit(1000).build();
+		List<CaseInstance> cases = caseInstanceRepository.find(summaryFilter).content();
+		Map<String, Long> byQueue = new HashMap<>();
+		Map<String, Long> byOwner = new HashMap<>();
+		Map<String, Long> byReadiness = new HashMap<>();
+		long blocked = 0;
+		long dueOrOverdue = 0;
+		long upcoming = 0;
+		String today = java.time.LocalDate.now().toString();
+		for (CaseInstance caseInstance : cases) {
+			increment(byQueue, caseInstance.getAccountsQueueId());
+			increment(byOwner, caseInstance.getAccountsNextActionOwnerType());
+			increment(byReadiness, caseInstance.getAccountsReadinessStatus());
+			if (Boolean.TRUE.equals(caseInstance.getAccountsWorkBlocked())) {
+				blocked++;
+			}
+			String dueAt = caseInstance.getAccountsNextActionDueAt();
+			if (dueAt != null && !dueAt.isBlank()) {
+				if (dueAt.compareTo(today) <= 0) {
+					dueOrOverdue++;
+				} else {
+					upcoming++;
+				}
+			}
+		}
+		return AccountsWorkSummary.builder().total(cases.size()).blocked(blocked).dueOrOverdue(dueOrOverdue)
+				.upcoming(upcoming).byQueue(byQueue).byOwner(byOwner).byReadinessStatus(byReadiness).build();
+	}
+
+	@Override
+	@Transactional
+	public CaseInstance transitionAccounts(final String businessKey, final AccountsTransition transition,
+			final AccountsTransitionRequest request) {
+		return commandExecutor.execute(new TransitionCaseAccountsCmd(businessKey, transition, request));
 	}
 
 	@Override
@@ -186,12 +313,26 @@ public class CaseInstanceServiceImpl implements CaseInstanceService {
 				.nextActionOwnerType(filters.getNextActionOwnerType()).queueId(filters.getQueueId())
 				.malformedCase(filters.getMalformedCase()).exceptionOnly(filters.getExceptionOnly())
 				.adminOwnerId(filters.getAdminOwnerId()).responsibleLawyerId(java.util.Optional.ofNullable(userId))
-				.healthReasonCode(filters.getHealthReasonCode()).dir(filters.getDir()).limit(filters.getLimit())
+				.healthReasonCode(filters.getHealthReasonCode()).matterType(filters.getMatterType())
+				.accountsReadinessStatus(filters.getAccountsReadinessStatus())
+				.accountsQueueId(filters.getAccountsQueueId())
+				.accountsNextActionOwnerType(filters.getAccountsNextActionOwnerType())
+				.accountsNextActionDueBefore(filters.getAccountsNextActionDueBefore())
+				.accountsWorkBlocked(filters.getAccountsWorkBlocked())
+				.accountsReadinessReasonCode(filters.getAccountsReadinessReasonCode())
+				.accountsWorkOnly(filters.getAccountsWorkOnly()).dir(filters.getDir()).limit(filters.getLimit())
 				.cursor(filters.getCursor()).build();
 	}
 
 	private boolean equalsNullable(Object left, Object right) {
 		return java.util.Objects.equals(left, right);
+	}
+
+	private void increment(Map<String, Long> counts, String key) {
+		if (key == null || key.isBlank()) {
+			return;
+		}
+		counts.put(key, counts.getOrDefault(key, 0L) + 1);
 	}
 
 	private CaseInstance assertCanAccessCase(final String businessKey) {

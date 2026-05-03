@@ -26,7 +26,17 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import com.google.gson.GsonBuilder;
 import com.wks.api.security.context.SecurityContextTenantHolderImpl;
 import com.wks.caseengine.cases.definition.CaseStatus;
+import com.wks.caseengine.cases.instance.CaseAttribute;
 import com.wks.caseengine.cases.instance.CaseInstance;
+import com.wks.caseengine.cases.instance.accounts.AccountsHealthReasonCode;
+import com.wks.caseengine.cases.instance.accounts.AccountsHealth;
+import com.wks.caseengine.cases.instance.accounts.AccountsLifecycleStage;
+import com.wks.caseengine.cases.instance.accounts.AccountsPolicyProfile;
+import com.wks.caseengine.cases.instance.accounts.AccountsReadinessStatus;
+import com.wks.caseengine.cases.instance.accounts.AccountsState;
+import com.wks.caseengine.cases.instance.accounts.BillingMode;
+import com.wks.caseengine.cases.instance.accounts.BillingPartyModel;
+import com.wks.caseengine.cases.instance.accounts.MatterType;
 import com.wks.caseengine.cases.instance.admin.AdminEventType;
 import com.wks.caseengine.cases.instance.admin.AdminLifecycleException;
 import com.wks.caseengine.cases.instance.admin.AdminLifecycleSupport;
@@ -72,7 +82,15 @@ class TransitionCaseAdminCmdTest {
 				.stage("Opening").status("WIP_CASE_STATUS").queueId(AdminLifecycleSupport.QUEUE_OPEN)
 				.adminOwnerId("admin-1").adminOwnerName("Admin Owner")
 				.responsibleLawyerId("lawyer-sub-1").responsibleLawyerName("Assigned Lawyer")
-				.nextActionOwnerType(NextActionOwnerType.ADMIN.getCode()).nextActionSummary("Activate control").build();
+				.nextActionOwnerType(NextActionOwnerType.ADMIN.getCode()).nextActionSummary("Activate control")
+				.matterType(MatterType.FLAT_FEE.getCode()).billingPartyModel(BillingPartyModel.DIRECT_CLIENT.getCode())
+				.billingMode(BillingMode.FLAT_FEE.getCode()).accountsProfile(AccountsPolicyProfile.FLAT_FEE_PROFILE.getCode())
+				.billingSetupComplete(true).flatFeeAmount("2500").paymentMethodAuthorized(true)
+				.paymentMethodRef("card-1")
+				.accountsStage(AccountsLifecycleStage.SETUP.getCode())
+				.accountsState(AccountsState.AWAITING_BILLING_SETUP.getCode())
+				.accountsHealth(AccountsHealth.AMBER.getCode()).accountsMalformedCase(false)
+				.build();
 		when(caseInstanceRepository.get("BK-1")).thenReturn(existingCase);
 
 		CaseInstance updatedCase = new TransitionCaseAdminCmd("BK-1", AdminTransition.ACTIVATE_MATTER,
@@ -84,6 +102,18 @@ class TransitionCaseAdminCmdTest {
 		assertEquals("Matter is now active", updatedCase.getNextActionSummary());
 		assertTrue(updatedCase.getAdminEvents().stream()
 				.anyMatch(event -> AdminEventType.CASE_ACTIVATED.getCode().equals(event.getEventType())));
+		assertEquals(MatterType.FLAT_FEE.getCode(), updatedCase.getMatterType());
+		assertEquals(BillingPartyModel.DIRECT_CLIENT.getCode(), updatedCase.getBillingPartyModel());
+		assertEquals(BillingMode.FLAT_FEE.getCode(), updatedCase.getBillingMode());
+		assertEquals(AccountsPolicyProfile.FLAT_FEE_PROFILE.getCode(), updatedCase.getAccountsProfile());
+		assertEquals(true, updatedCase.getBillingSetupComplete());
+		assertEquals("2500", updatedCase.getFlatFeeAmount());
+		assertEquals(true, updatedCase.getPaymentMethodAuthorized());
+		assertEquals("card-1", updatedCase.getPaymentMethodRef());
+		assertEquals(AccountsLifecycleStage.SETUP.getCode(), updatedCase.getAccountsStage());
+		assertEquals(AccountsState.AWAITING_BILLING_SETUP.getCode(), updatedCase.getAccountsState());
+		assertEquals(AccountsHealth.AMBER.getCode(), updatedCase.getAccountsHealth());
+		assertEquals(false, updatedCase.getAccountsMalformedCase());
 		assertEquals(AdminState.ACTIVE.getCode(), caseInstanceCaptor.getValue().getAdminState());
 	}
 
@@ -203,10 +233,54 @@ class TransitionCaseAdminCmdTest {
 		assertEquals(AdminLifecycleSupport.QUEUE_ACTIVE, caseInstanceCaptor.getValue().getQueueId());
 	}
 
+	@Test
+	void shouldBlockReadyToOpenWhenAccountsReadinessIsNotReadyWithoutChangingAdminState() throws Exception {
+		CaseInstance existingCase = openingCaseBuilder().matterType(MatterType.FLAT_FEE.getCode())
+				.billingMode(BillingMode.FLAT_FEE.getCode()).build();
+		when(caseInstanceRepository.get("BK-1")).thenReturn(existingCase);
+
+		AdminLifecycleException exception = assertThrows(AdminLifecycleException.class,
+				() -> new TransitionCaseAdminCmd("BK-1", AdminTransition.MARK_READY_TO_OPEN,
+						AdminTransitionRequest.builder().nextActionSummary("Prepare opening").build())
+						.execute(commandContext));
+
+		verify(caseInstanceRepository).update(eq("BK-1"), caseInstanceCaptor.capture());
+		CaseInstance persistedCase = caseInstanceCaptor.getValue();
+		assertEquals(AdminState.INTAKE_REVIEW.getCode(), persistedCase.getAdminState());
+		assertEquals(AccountsReadinessStatus.NOT_READY.getCode(), persistedCase.getAccountsReadinessStatus());
+		assertTrue(exception.getReasonCodes().contains(AccountsHealthReasonCode.MISSING_BILLING_SETUP.getCode()));
+		assertTrue(exception.getReasonCodes().contains(AccountsHealthReasonCode.MISSING_FLAT_FEE_SETUP.getCode()));
+	}
+
+	@Test
+	void shouldAllowReadyToOpenWhenAccountsReadinessIsReady() throws Exception {
+		CaseInstance existingCase = openingCaseBuilder().matterType(MatterType.FLAT_FEE.getCode())
+				.billingMode(BillingMode.FLAT_FEE.getCode()).billingSetupComplete(true).flatFeeAmount("2500").build();
+		when(caseInstanceRepository.get("BK-1")).thenReturn(existingCase);
+
+		CaseInstance updatedCase = new TransitionCaseAdminCmd("BK-1", AdminTransition.MARK_READY_TO_OPEN,
+				AdminTransitionRequest.builder().nextActionSummary("Prepare opening").build()).execute(commandContext);
+
+		verify(caseInstanceRepository).update(eq("BK-1"), caseInstanceCaptor.capture());
+		assertEquals(AdminState.READY_TO_OPEN.getCode(), updatedCase.getAdminState());
+		assertEquals(AccountsReadinessStatus.READY.getCode(), updatedCase.getAccountsReadinessStatus());
+		assertEquals(AccountsPolicyProfile.FLAT_FEE_PROFILE.getCode(), updatedCase.getAccountsProfile());
+	}
+
 	private void setJwtSecurityContext(String sub, List<String> roles) {
 		Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(300), Map.of("alg", "none"),
 				Map.of("sub", sub, "realm_access", Map.of("roles", roles)));
 		SecurityContextHolder.getContext()
 				.setAuthentication(new UsernamePasswordAuthenticationToken("user", jwt, List.of()));
+	}
+
+	private CaseInstance.CaseInstanceBuilder openingCaseBuilder() {
+		return CaseInstance.builder().businessKey("BK-1")
+				.caseDefinitionId(AdminLifecycleSupport.CASE_DEFINITION_ID)
+				.adminState(AdminState.INTAKE_REVIEW.getCode()).stage("Onboarding").status("WIP_CASE_STATUS")
+				.adminOwnerId("admin-1").adminOwnerName("Admin Owner")
+				.nextActionOwnerType(NextActionOwnerType.ADMIN.getCode()).nextActionSummary("Opening review")
+				.attributes(List.of(CaseAttribute.builder().name("engagementReceived").value("true").build(),
+						CaseAttribute.builder().name("conflictsCleared").value("true").build()));
 	}
 }

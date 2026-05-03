@@ -917,10 +917,10 @@ export const CaseForm = ({ open, handleClose, aCase, keycloak }) => {
                           }`}
                         />
                         <Chip
-                          label={`Health: ${caseData.adminHealth || '-'}`}
+                          label={`Health Signal: ${caseData.adminHealth || '-'}`}
                         />
                         <Chip
-                          label={`Next Owner: ${
+                          label={`Next Action Owner: ${
                             caseData.nextActionOwnerTypeDescription ||
                             caseData.nextActionOwnerType ||
                             '-'
@@ -937,7 +937,7 @@ export const CaseForm = ({ open, handleClose, aCase, keycloak }) => {
                           Next action: {caseData.nextActionSummary || '-'}
                         </Typography>
                         <Typography variant='body2'>
-                          Queue: {caseData.queueId || '-'}
+                          Work view: {caseData.queueId || '-'}
                         </Typography>
                         <Typography variant='body2'>
                           Responsible lawyer:{' '}

@@ -4,6 +4,8 @@ import java.util.Objects;
 
 import com.wks.caseengine.cases.instance.CaseInstance;
 import com.wks.caseengine.cases.instance.CaseInstanceNotFoundException;
+import com.wks.caseengine.cases.instance.accounts.AccountsReadinessEvaluation;
+import com.wks.caseengine.cases.instance.accounts.AccountsReadinessSupport;
 import com.wks.caseengine.cases.instance.admin.AdminEvent;
 import com.wks.caseengine.cases.instance.admin.AdminEventType;
 import com.wks.caseengine.cases.instance.admin.AdminLifecycleAccessSupport;
@@ -97,6 +99,7 @@ public class TransitionCaseAdminCmd implements Command<CaseInstance> {
 	private void markReadyToOpen(CommandContext commandContext, CaseInstance caseInstance) {
 		requireState(caseInstance, AdminState.INTAKE_REVIEW, AdminState.AWAITING_ENGAGEMENT);
 		requireOpeningReadiness(caseInstance);
+		requireAccountsReadinessForOpening(commandContext, caseInstance);
 		moveToState(commandContext, caseInstance, AdminState.READY_TO_OPEN, request.getQueueId());
 		clearWaiting(caseInstance);
 		applyNextAction(commandContext, caseInstance, NextActionOwnerType.ADMIN,
@@ -149,6 +152,7 @@ public class TransitionCaseAdminCmd implements Command<CaseInstance> {
 
 	private void lawyerReturnForFixes(CommandContext commandContext, CaseInstance caseInstance) {
 		requireState(caseInstance, AdminState.READY_FOR_LAWYER);
+		requireAccountsReadinessForOpening(commandContext, caseInstance);
 		moveToState(commandContext, caseInstance, AdminState.READY_TO_OPEN, request.getQueueId());
 		clearWaiting(caseInstance);
 		applyNextAction(commandContext, caseInstance, NextActionOwnerType.ADMIN,
@@ -461,6 +465,19 @@ public class TransitionCaseAdminCmd implements Command<CaseInstance> {
 		if (!AdminLifecycleSupport.isTruthyAttribute(caseInstance, "engagementReceived")
 				|| !AdminLifecycleSupport.isTruthyAttribute(caseInstance, "conflictsCleared")) {
 			throw new AdminLifecycleException("engagementReceived and conflictsCleared must both be complete before moving to Ready to Open");
+		}
+	}
+
+	private void requireAccountsReadinessForOpening(CommandContext commandContext, CaseInstance caseInstance) {
+		AccountsReadinessEvaluation readiness = AccountsReadinessSupport.applyEvaluation(caseInstance);
+		if (!readiness.isReady()) {
+			try {
+				commandContext.getCaseInstanceRepository().update(businessKey, caseInstance);
+			} catch (DatabaseRecordNotFoundException e) {
+				throw new CaseInstanceNotFoundException(e.getMessage(), e);
+			}
+			throw new AdminLifecycleException("Accounts readiness must be READY before moving to Ready to Open",
+					readiness.getAccountsReadinessReasonCodes());
 		}
 	}
 

@@ -80,6 +80,20 @@ public class CaseInstanceJpaRepositoryImpl implements CaseInstanceRepository {
 	            .ifPresent(responsibleLawyerId -> predicates.add(cb.equal(root.get("responsibleLawyerId"), responsibleLawyerId)));
 	    filters.getHealthReasonCode().ifPresent(healthReasonCode -> predicates
 	            .add(cb.like(root.get("healthReasonCodes").as(String.class), "%" + healthReasonCode + "%")));
+	    filters.getMatterType().ifPresent(matterType -> predicates.add(cb.equal(root.get("matterType"), matterType)));
+	    filters.getAccountsReadinessStatus()
+	            .ifPresent(status -> predicates.add(cb.equal(root.get("accountsReadinessStatus"), status)));
+	    filters.getAccountsQueueId().ifPresent(queueId -> predicates.add(cb.equal(root.get("accountsQueueId"), queueId)));
+	    filters.getAccountsNextActionOwnerType()
+	            .ifPresent(ownerType -> predicates.add(cb.equal(root.get("accountsNextActionOwnerType"), ownerType)));
+	    filters.getAccountsNextActionDueBefore()
+	            .ifPresent(dueBefore -> predicates.add(cb.lessThanOrEqualTo(root.get("accountsNextActionDueAt").as(String.class), dueBefore)));
+	    filters.getAccountsWorkBlocked()
+	            .ifPresent(blocked -> predicates.add(cb.equal(root.get("accountsWorkBlocked"), blocked)));
+	    filters.getAccountsReadinessReasonCode().ifPresent(reasonCode -> predicates
+	            .add(cb.like(root.get("accountsReadinessReasonCodes").as(String.class), "%" + reasonCode + "%")));
+	    filters.getAccountsWorkOnly().filter(Boolean::booleanValue)
+	            .ifPresent(a -> predicates.add(cb.isNotNull(root.get("accountsQueueId"))));
 
 	    Cursor cursor = filters.getCursor();
 	    if (cursor != null) {
@@ -169,6 +183,41 @@ public class CaseInstanceJpaRepositoryImpl implements CaseInstanceRepository {
 		entity.setResumeToState(caseInstance.getResumeToState());
 		entity.setLastStateChangedAt(caseInstance.getLastStateChangedAt());
 		entity.setOpenedAt(caseInstance.getOpenedAt());
+		entity.setMatterType(caseInstance.getMatterType());
+		entity.setBillingPartyModel(caseInstance.getBillingPartyModel());
+		entity.setBillingMode(caseInstance.getBillingMode());
+		entity.setAccountsProfile(caseInstance.getAccountsProfile());
+		entity.setBillingSetupComplete(caseInstance.getBillingSetupComplete());
+		entity.setFlatFeeAmount(caseInstance.getFlatFeeAmount());
+		entity.setPaymentMethodAuthorized(caseInstance.getPaymentMethodAuthorized());
+		entity.setPaymentMethodRef(caseInstance.getPaymentMethodRef());
+		entity.setRetainerAmount(caseInstance.getRetainerAmount());
+		entity.setRetainerFundsReceived(caseInstance.getRetainerFundsReceived());
+		entity.setSubscriptionPlanId(caseInstance.getSubscriptionPlanId());
+		entity.setSubscriptionPlanName(caseInstance.getSubscriptionPlanName());
+		entity.setSubscriptionActive(caseInstance.getSubscriptionActive());
+		entity.setInstructingFirmId(caseInstance.getInstructingFirmId());
+		entity.setInstructingFirmName(caseInstance.getInstructingFirmName());
+		entity.setCounselBillingMode(caseInstance.getCounselBillingMode());
+		entity.setCounselBillingPartyOverride(caseInstance.getCounselBillingPartyOverride());
+		entity.setAccountsStage(caseInstance.getAccountsStage());
+		entity.setAccountsState(caseInstance.getAccountsState());
+		entity.setAccountsHealth(caseInstance.getAccountsHealth());
+		entity.setAccountsHealthReasonCodes(caseInstance.getAccountsHealthReasonCodes());
+		entity.setAccountsHealthEvaluatedAt(caseInstance.getAccountsHealthEvaluatedAt());
+		entity.setAccountsStaleSince(caseInstance.getAccountsStaleSince());
+		entity.setAccountsMalformedCase(caseInstance.getAccountsMalformedCase());
+		entity.setAccountsReadinessStatus(caseInstance.getAccountsReadinessStatus());
+		entity.setAccountsReadinessReasonCodes(caseInstance.getAccountsReadinessReasonCodes());
+		entity.setAccountsReadinessEvaluatedAt(caseInstance.getAccountsReadinessEvaluatedAt());
+		entity.setAccountsReadinessSummary(caseInstance.getAccountsReadinessSummary());
+		entity.setAccountsQueueId(caseInstance.getAccountsQueueId());
+		entity.setAccountsNextActionOwnerType(caseInstance.getAccountsNextActionOwnerType());
+		entity.setAccountsNextActionSummary(caseInstance.getAccountsNextActionSummary());
+		entity.setAccountsNextActionDueAt(caseInstance.getAccountsNextActionDueAt());
+		entity.setAccountsWorkBlocked(caseInstance.getAccountsWorkBlocked());
+		entity.setAccountsWorkPriority(caseInstance.getAccountsWorkPriority());
+		entity.setAccountsEvents(caseInstance.getAccountsEvents());
 		entity.setAdminEvents(caseInstance.getAdminEvents());
 
 		entityManager.merge(entity);
@@ -251,6 +300,41 @@ public class CaseInstanceJpaRepositoryImpl implements CaseInstanceRepository {
 		caseInstance.setResumeToState(entity.getResumeToState());
 		caseInstance.setLastStateChangedAt(entity.getLastStateChangedAt());
 		caseInstance.setOpenedAt(entity.getOpenedAt());
+		caseInstance.setMatterType(entity.getMatterType());
+		caseInstance.setBillingPartyModel(entity.getBillingPartyModel());
+		caseInstance.setBillingMode(entity.getBillingMode());
+		caseInstance.setAccountsProfile(entity.getAccountsProfile());
+		caseInstance.setBillingSetupComplete(entity.getBillingSetupComplete());
+		caseInstance.setFlatFeeAmount(entity.getFlatFeeAmount());
+		caseInstance.setPaymentMethodAuthorized(entity.getPaymentMethodAuthorized());
+		caseInstance.setPaymentMethodRef(entity.getPaymentMethodRef());
+		caseInstance.setRetainerAmount(entity.getRetainerAmount());
+		caseInstance.setRetainerFundsReceived(entity.getRetainerFundsReceived());
+		caseInstance.setSubscriptionPlanId(entity.getSubscriptionPlanId());
+		caseInstance.setSubscriptionPlanName(entity.getSubscriptionPlanName());
+		caseInstance.setSubscriptionActive(entity.getSubscriptionActive());
+		caseInstance.setInstructingFirmId(entity.getInstructingFirmId());
+		caseInstance.setInstructingFirmName(entity.getInstructingFirmName());
+		caseInstance.setCounselBillingMode(entity.getCounselBillingMode());
+		caseInstance.setCounselBillingPartyOverride(entity.getCounselBillingPartyOverride());
+		caseInstance.setAccountsStage(entity.getAccountsStage());
+		caseInstance.setAccountsState(entity.getAccountsState());
+		caseInstance.setAccountsHealth(entity.getAccountsHealth());
+		caseInstance.setAccountsHealthReasonCodes(entity.getAccountsHealthReasonCodes());
+		caseInstance.setAccountsHealthEvaluatedAt(entity.getAccountsHealthEvaluatedAt());
+		caseInstance.setAccountsStaleSince(entity.getAccountsStaleSince());
+		caseInstance.setAccountsMalformedCase(entity.getAccountsMalformedCase());
+		caseInstance.setAccountsReadinessStatus(entity.getAccountsReadinessStatus());
+		caseInstance.setAccountsReadinessReasonCodes(entity.getAccountsReadinessReasonCodes());
+		caseInstance.setAccountsReadinessEvaluatedAt(entity.getAccountsReadinessEvaluatedAt());
+		caseInstance.setAccountsReadinessSummary(entity.getAccountsReadinessSummary());
+		caseInstance.setAccountsQueueId(entity.getAccountsQueueId());
+		caseInstance.setAccountsNextActionOwnerType(entity.getAccountsNextActionOwnerType());
+		caseInstance.setAccountsNextActionSummary(entity.getAccountsNextActionSummary());
+		caseInstance.setAccountsNextActionDueAt(entity.getAccountsNextActionDueAt());
+		caseInstance.setAccountsWorkBlocked(entity.getAccountsWorkBlocked());
+		caseInstance.setAccountsWorkPriority(entity.getAccountsWorkPriority());
+		caseInstance.setAccountsEvents(entity.getAccountsEvents());
 		caseInstance.setAdminEvents(entity.getAdminEvents());
 		return caseInstance;
 	}
@@ -292,6 +376,41 @@ public class CaseInstanceJpaRepositoryImpl implements CaseInstanceRepository {
 		entity.setResumeToState(caseInstance.getResumeToState());
 		entity.setLastStateChangedAt(caseInstance.getLastStateChangedAt());
 		entity.setOpenedAt(caseInstance.getOpenedAt());
+		entity.setMatterType(caseInstance.getMatterType());
+		entity.setBillingPartyModel(caseInstance.getBillingPartyModel());
+		entity.setBillingMode(caseInstance.getBillingMode());
+		entity.setAccountsProfile(caseInstance.getAccountsProfile());
+		entity.setBillingSetupComplete(caseInstance.getBillingSetupComplete());
+		entity.setFlatFeeAmount(caseInstance.getFlatFeeAmount());
+		entity.setPaymentMethodAuthorized(caseInstance.getPaymentMethodAuthorized());
+		entity.setPaymentMethodRef(caseInstance.getPaymentMethodRef());
+		entity.setRetainerAmount(caseInstance.getRetainerAmount());
+		entity.setRetainerFundsReceived(caseInstance.getRetainerFundsReceived());
+		entity.setSubscriptionPlanId(caseInstance.getSubscriptionPlanId());
+		entity.setSubscriptionPlanName(caseInstance.getSubscriptionPlanName());
+		entity.setSubscriptionActive(caseInstance.getSubscriptionActive());
+		entity.setInstructingFirmId(caseInstance.getInstructingFirmId());
+		entity.setInstructingFirmName(caseInstance.getInstructingFirmName());
+		entity.setCounselBillingMode(caseInstance.getCounselBillingMode());
+		entity.setCounselBillingPartyOverride(caseInstance.getCounselBillingPartyOverride());
+		entity.setAccountsStage(caseInstance.getAccountsStage());
+		entity.setAccountsState(caseInstance.getAccountsState());
+		entity.setAccountsHealth(caseInstance.getAccountsHealth());
+		entity.setAccountsHealthReasonCodes(caseInstance.getAccountsHealthReasonCodes());
+		entity.setAccountsHealthEvaluatedAt(caseInstance.getAccountsHealthEvaluatedAt());
+		entity.setAccountsStaleSince(caseInstance.getAccountsStaleSince());
+		entity.setAccountsMalformedCase(caseInstance.getAccountsMalformedCase());
+		entity.setAccountsReadinessStatus(caseInstance.getAccountsReadinessStatus());
+		entity.setAccountsReadinessReasonCodes(caseInstance.getAccountsReadinessReasonCodes());
+		entity.setAccountsReadinessEvaluatedAt(caseInstance.getAccountsReadinessEvaluatedAt());
+		entity.setAccountsReadinessSummary(caseInstance.getAccountsReadinessSummary());
+		entity.setAccountsQueueId(caseInstance.getAccountsQueueId());
+		entity.setAccountsNextActionOwnerType(caseInstance.getAccountsNextActionOwnerType());
+		entity.setAccountsNextActionSummary(caseInstance.getAccountsNextActionSummary());
+		entity.setAccountsNextActionDueAt(caseInstance.getAccountsNextActionDueAt());
+		entity.setAccountsWorkBlocked(caseInstance.getAccountsWorkBlocked());
+		entity.setAccountsWorkPriority(caseInstance.getAccountsWorkPriority());
+		entity.setAccountsEvents(caseInstance.getAccountsEvents());
 		entity.setAdminEvents(caseInstance.getAdminEvents());
 		
 		return entity;

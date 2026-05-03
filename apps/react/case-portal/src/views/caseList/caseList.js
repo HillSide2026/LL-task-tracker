@@ -131,7 +131,10 @@ export const CaseList = ({ status, caseDefId, filters = {} }) => {
       },
       {
         field: 'queueId',
-        headerName: t('pages.caselist.datagrid.columns.queue'),
+        headerName:
+          caseDefId === ADMIN_OPENING_CONTROL_CASE_DEF_ID
+            ? 'Work View'
+            : t('pages.caselist.datagrid.columns.queue'),
         width: 200,
       },
     ]
@@ -145,12 +148,12 @@ export const CaseList = ({ status, caseDefId, filters = {} }) => {
         },
         {
           field: 'adminHealthDescription',
-          headerName: 'Health',
+          headerName: 'Health Signal',
           width: 120,
         },
         {
           field: 'nextActionOwnerTypeDescription',
-          headerName: 'Next Owner',
+          headerName: 'Next Action Owner',
           width: 150,
         },
         {

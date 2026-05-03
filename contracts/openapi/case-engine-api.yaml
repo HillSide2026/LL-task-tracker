@@ -142,6 +142,184 @@ components:
         - lawyerRequestClientFollowup
         - lawyerRequestExternalFollowup
 
+    MatterType:
+      type: string
+      description: Canonical matter type driving accounts policy requirements.
+      enum:
+        - FLAT_FEE
+        - HOURLY_CREDIT_CARD
+        - HOURLY_RETAINER
+        - SUBSCRIPTION_CREDIT_CARD
+        - SUBSCRIPTION_RETAINER
+        - COUNSEL
+
+    BillingPartyModel:
+      type: string
+      description: Party model responsible for matter billing.
+      enum:
+        - DIRECT_CLIENT
+        - INSTRUCTING_FIRM
+        - THIRD_PARTY_PAYOR
+
+    BillingMode:
+      type: string
+      description: Financial mechanics used by the accounts policy.
+      enum:
+        - FLAT_FEE
+        - HOURLY_CARD
+        - HOURLY_RETAINER
+        - SUBSCRIPTION_CARD
+        - SUBSCRIPTION_RETAINER
+        - COUNSEL_HOURLY
+        - COUNSEL_RETAINER
+        - COUNSEL_FLAT_FEE
+        - COUNSEL_RECURRING
+
+    AccountsPolicyProfile:
+      type: string
+      description: Accounts policy profile resolved from matter type.
+      enum:
+        - FLAT_FEE_PROFILE
+        - HOURLY_CREDIT_CARD_PROFILE
+        - HOURLY_RETAINER_PROFILE
+        - SUBSCRIPTION_CREDIT_CARD_PROFILE
+        - SUBSCRIPTION_RETAINER_PROFILE
+        - COUNSEL_PROFILE
+
+    AccountsLifecycleStage:
+      type: string
+      description: High-level accounts lifecycle stage.
+      enum:
+        - SETUP
+        - ACTIVE
+        - EXCEPTION
+        - CLOSED
+
+    AccountsState:
+      type: string
+      description: Operational accounts state within the accounts lifecycle stage.
+      enum:
+        - AWAITING_BILLING_SETUP
+        - AWAITING_PAYMENT_METHOD
+        - AWAITING_RETAINER_FUNDING
+        - AWAITING_ENGAGEMENT_TERMS
+        - READY_FOR_ACTIVATION
+        - ACTIVE_CURRENT
+        - INVOICE_ISSUED
+        - PAYMENT_PENDING
+        - TRUST_DRAWDOWN_PENDING
+        - PAST_DUE
+        - IN_COLLECTIONS
+        - PAYMENT_ARRANGEMENT_ACTIVE
+        - FINAL_RECONCILIATION_PENDING
+        - CLOSED
+
+    AccountsTransition:
+      type: string
+      description: Named accounts transition. In Phase 3, activateAccounts is policy-guarded.
+      enum:
+        - completeBillingSetup
+        - authorizePaymentMethod
+        - recordRetainerFunded
+        - recordEngagementTermsComplete
+        - activateAccounts
+        - issueInvoice
+        - recordPaymentReceived
+        - requestTrustDrawdown
+        - approveTrustDrawdown
+        - flagPastDue
+        - escalateToCollections
+        - recordPaymentArrangement
+        - returnToCurrent
+        - issueFinalAccountStatement
+        - reconcileFinalBalance
+        - closeAccount
+
+    AccountsEventType:
+      type: string
+      description: Type of accounts lifecycle event recorded against a matter.
+      enum:
+        - ACCOUNTS_INITIALIZED
+        - BILLING_SETUP_COMPLETED
+        - PAYMENT_METHOD_AUTHORIZED
+        - RETAINER_FUNDED
+        - ENGAGEMENT_TERMS_COMPLETED
+        - ACCOUNTS_ACTIVATED
+        - INVOICE_ISSUED
+        - PAYMENT_RECEIVED
+        - TRUST_DRAWDOWN_REQUESTED
+        - TRUST_DRAWDOWN_APPROVED
+        - ACCOUNT_FLAGGED_PAST_DUE
+        - COLLECTIONS_ESCALATED
+        - PAYMENT_ARRANGEMENT_RECORDED
+        - ACCOUNT_RETURNED_TO_CURRENT
+        - FINAL_ACCOUNT_STATEMENT_ISSUED
+        - FINAL_RECONCILIATION_COMPLETED
+        - ACCOUNT_CLOSED
+        - HEALTH_REEVALUATED
+
+    AccountsHealth:
+      type: string
+      description: Accounts health signal. Phase 3 persists and exposes this field without full health scoring.
+      enum:
+        - GREEN
+        - AMBER
+        - RED
+
+    AccountsHealthReasonCode:
+      type: string
+      description: Machine-readable accounts health reason codes.
+      enum:
+        - MISSING_BILLING_SETUP
+        - MISSING_PAYMENT_METHOD
+        - MISSING_RETAINER
+        - LOW_TRUST_BALANCE
+        - PAST_DUE_INVOICE
+        - REPEATED_PAYMENT_FAILURE
+        - COLLECTIONS_ACTIVE
+        - MISSING_BILLING_CONTACT
+        - MISSING_INSTRUCTING_FIRM
+        - MISSING_COUNSEL_BILLING_MODE
+        - FINAL_RECONCILIATION_OUTSTANDING
+        - MALFORMED_CONFIGURATION
+        - MISSING_MATTER_TYPE
+        - MISSING_FLAT_FEE_SETUP
+        - MISSING_SUBSCRIPTION_CONFIGURATION
+        - MISSING_COUNSEL_CONFIGURATION
+        - INVALID_BILLING_PARTY_MODEL
+        - INVALID_BILLING_MODE
+        - INVALID_ACCOUNTS_STATE
+        - INVALID_ACCOUNTS_TRANSITION
+
+    AccountsReadinessStatus:
+      type: string
+      description: Whether accounts setup permits administrative opening.
+      enum:
+        - NOT_EVALUATED
+        - NOT_READY
+        - READY
+        - BLOCKED
+
+    AccountsWorkOwnerType:
+      type: string
+      description: Who owns the next accounts work item.
+      enum:
+        - ACCOUNTS
+        - ADMIN
+        - LAWYER
+        - CLIENT
+        - INSTRUCTING_FIRM
+        - SYSTEM
+
+    AccountsWorkPriority:
+      type: string
+      description: Operational priority for accounts work views.
+      enum:
+        - LOW
+        - NORMAL
+        - HIGH
+        - URGENT
+
     CaseStatus:
       type: string
       description: Process-level status of a case instance.
@@ -240,12 +418,45 @@ components:
         note:
           type: string
 
+    AccountsEvent:
+      type: object
+      description: An immutable audit event recording an accounts lifecycle shell event on a case.
+      properties:
+        eventType:
+          $ref: "#/components/schemas/AccountsEventType"
+        occurredAt:
+          type: string
+          format: date-time
+        actorType:
+          type: string
+        actorId:
+          type: string
+        actorName:
+          type: string
+        fromState:
+          type: string
+        toState:
+          type: string
+        fromStage:
+          type: string
+        toStage:
+          type: string
+        reasonCode:
+          type: string
+        note:
+          type: string
+
     CaseInstance:
       type: object
       description: |
         A matter (case instance) managed by the case engine. This is the primary
         domain object. Consumers MUST treat adminState, adminHealth, and all lifecycle
         fields as read-only display data — only the case engine may transition them.
+        Admin lifecycle stages are the fixed spine: Onboarding, Opening, Maintenance,
+        Closing, and Archived. Queues are filtered work views over matters and do not
+        define the matter lifecycle. Health, owner, next action, staleness, waiting
+        details, and exceptions are separate signals rather than combinations encoded
+        into adminState.
       properties:
         businessKey:
           type: string
@@ -273,6 +484,7 @@ components:
             $ref: "#/components/schemas/CaseAttribute"
         queueId:
           type: string
+          description: Filterable work-view queue identifier. Does not define lifecycle stage or adminState.
         adminState:
           $ref: "#/components/schemas/AdminState"
         adminHealth:
@@ -332,11 +544,93 @@ components:
             $ref: "#/components/schemas/AdminEvent"
         # Domain vocabulary fields (added in 1.1.0)
         matterType:
-          type: string
+          allOf:
+            - $ref: "#/components/schemas/MatterType"
           description: |
             Classification of the type of engagement. Set by the Matter domain only.
             Does not define lifecycle stage or state. PRODUCT is explicitly excluded.
             Spec reference: contracts/domain/vocabulary.yaml#MatterType
+        billingPartyModel:
+          $ref: "#/components/schemas/BillingPartyModel"
+        billingMode:
+          $ref: "#/components/schemas/BillingMode"
+        accountsProfile:
+          $ref: "#/components/schemas/AccountsPolicyProfile"
+        billingSetupComplete:
+          type: boolean
+        flatFeeAmount:
+          type: string
+        paymentMethodAuthorized:
+          type: boolean
+        paymentMethodRef:
+          type: string
+        retainerAmount:
+          type: string
+        retainerFundsReceived:
+          type: boolean
+        subscriptionPlanId:
+          type: string
+        subscriptionPlanName:
+          type: string
+        subscriptionActive:
+          type: boolean
+        instructingFirmId:
+          type: string
+        instructingFirmName:
+          type: string
+        counselBillingMode:
+          type: string
+          description: Counsel-specific billing mode; separate from lifecycle stage/state.
+        counselBillingPartyOverride:
+          type: boolean
+          description: Explicit override allowing COUNSEL matters to use a billing party model other than INSTRUCTING_FIRM.
+        accountsStage:
+          $ref: "#/components/schemas/AccountsLifecycleStage"
+        accountsState:
+          $ref: "#/components/schemas/AccountsState"
+        accountsHealth:
+          $ref: "#/components/schemas/AccountsHealth"
+        accountsHealthReasonCodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountsHealthReasonCode"
+        accountsHealthEvaluatedAt:
+          type: string
+          format: date-time
+        accountsStaleSince:
+          type: string
+          format: date-time
+        accountsMalformedCase:
+          type: boolean
+        accountsReadinessStatus:
+          $ref: "#/components/schemas/AccountsReadinessStatus"
+        accountsReadinessReasonCodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountsHealthReasonCode"
+        accountsReadinessEvaluatedAt:
+          type: string
+          format: date-time
+        accountsReadinessSummary:
+          type: string
+        accountsQueueId:
+          type: string
+          description: Filterable accounts work-view queue identifier. Does not define lifecycle stage or accountsState.
+        accountsNextActionOwnerType:
+          $ref: "#/components/schemas/AccountsWorkOwnerType"
+        accountsNextActionSummary:
+          type: string
+        accountsNextActionDueAt:
+          type: string
+          format: date
+        accountsWorkBlocked:
+          type: boolean
+        accountsWorkPriority:
+          $ref: "#/components/schemas/AccountsWorkPriority"
+        accountsEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountsEvent"
         matterState:
           type: string
           description: |
@@ -442,6 +736,88 @@ components:
         resumeToState:
           type: string
 
+    AccountsTransitionRequest:
+      type: object
+      description: Optional request body when triggering an accounts lifecycle transition.
+      properties:
+        transition:
+          $ref: "#/components/schemas/AccountsTransition"
+        actorType:
+          type: string
+        actorName:
+          type: string
+        note:
+          type: string
+        reasonCode:
+          type: string
+
+    AccountsControlEvaluation:
+      type: object
+      description: Shell DTO for persisted accounts control signals.
+      properties:
+        accountsHealth:
+          $ref: "#/components/schemas/AccountsHealth"
+        accountsHealthReasonCodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountsHealthReasonCode"
+        accountsHealthEvaluatedAt:
+          type: string
+          format: date-time
+        accountsStaleSince:
+          type: string
+          format: date-time
+        accountsMalformedCase:
+          type: boolean
+
+    AccountsReadinessEvaluation:
+      type: object
+      description: Evaluation of whether accounts setup permits administrative opening.
+      properties:
+        accountsReadinessStatus:
+          $ref: "#/components/schemas/AccountsReadinessStatus"
+        accountsReadinessReasonCodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountsHealthReasonCode"
+        accountsReadinessEvaluatedAt:
+          type: string
+          format: date-time
+        accountsReadinessSummary:
+          type: string
+
+    AccountsWorkSummary:
+      type: object
+      description: Portfolio summary of outstanding and upcoming accounts work.
+      properties:
+        total:
+          type: integer
+          format: int64
+        blocked:
+          type: integer
+          format: int64
+        dueOrOverdue:
+          type: integer
+          format: int64
+        upcoming:
+          type: integer
+          format: int64
+        byQueue:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+        byOwner:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+        byReadinessStatus:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+
     CaseInstancePage:
       type: object
       description: Paginated list of case instances.
@@ -484,6 +860,11 @@ components:
           type: string
         field:
           type: string
+        reasonCodes:
+          type: array
+          description: Structured lifecycle or policy reason codes when available.
+          items:
+            type: string
 
     # ── Conversion schemas (added in 1.1.0) ────────────────────────────────────
 
@@ -504,7 +885,8 @@ components:
           type: string
           description: The Matter's businessKey. Canonical identifier.
         matterType:
-          type: string
+          allOf:
+            - $ref: "#/components/schemas/MatterType"
           nullable: true
         matterLifecycleStage:
           type: string
@@ -547,7 +929,8 @@ components:
             Caller-supplied stable key. Recommend using opportunityId.
             Duplicate requests return the existing Matter rather than creating a new one.
         matterType:
-          type: string
+          allOf:
+            - $ref: "#/components/schemas/MatterType"
           nullable: true
         requestedBy:
           type: string
@@ -839,6 +1222,302 @@ paths:
       responses:
         "200":
           description: The updated case instance after transition.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseInstance"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /case/{businessKey}/accounts:
+    get:
+      operationId: getCaseAccounts
+      summary: Get the accounts lifecycle shell for a case
+      description: |
+        Initializes the accounts lifecycle shell when missing and returns
+        the current case snapshot. This endpoint does not perform readiness,
+        health, activation, or cross-lifecycle blocking.
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Case instance with accounts shell fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseInstance"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /case/accounts/work:
+    get:
+      operationId: listAccountsWork
+      summary: List outstanding and upcoming accounts work
+      description: |
+        Returns matters with accounts work signals. This is a filtered work view
+        over matter/account fields and does not define lifecycle stage or state.
+      tags: [Case Instance]
+      parameters:
+        - name: accountsReadinessStatus
+          in: query
+          schema:
+            $ref: "#/components/schemas/AccountsReadinessStatus"
+        - name: accountsQueueId
+          in: query
+          schema:
+            type: string
+        - name: accountsNextActionOwnerType
+          in: query
+          schema:
+            $ref: "#/components/schemas/AccountsWorkOwnerType"
+        - name: accountsNextActionDueBefore
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: accountsWorkBlocked
+          in: query
+          schema:
+            type: string
+        - name: accountsReadinessReasonCode
+          in: query
+          schema:
+            $ref: "#/components/schemas/AccountsHealthReasonCode"
+        - name: matterType
+          in: query
+          schema:
+            $ref: "#/components/schemas/MatterType"
+        - name: adminOwnerId
+          in: query
+          schema:
+            type: string
+        - name: responsibleLawyerId
+          in: query
+          schema:
+            type: string
+        - name: before
+          in: query
+          schema:
+            type: string
+        - name: after
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated accounts work matters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseInstancePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /case/accounts/work/summary:
+    get:
+      operationId: summarizeAccountsWork
+      summary: Summarize outstanding and upcoming accounts work
+      description: Returns counts by queue, owner, readiness status, blocked, and due bucket.
+      tags: [Case Instance]
+      parameters:
+        - name: accountsReadinessStatus
+          in: query
+          schema:
+            $ref: "#/components/schemas/AccountsReadinessStatus"
+        - name: accountsQueueId
+          in: query
+          schema:
+            type: string
+        - name: accountsNextActionOwnerType
+          in: query
+          schema:
+            $ref: "#/components/schemas/AccountsWorkOwnerType"
+        - name: accountsNextActionDueBefore
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: accountsWorkBlocked
+          in: query
+          schema:
+            type: string
+        - name: accountsReadinessReasonCode
+          in: query
+          schema:
+            $ref: "#/components/schemas/AccountsHealthReasonCode"
+        - name: matterType
+          in: query
+          schema:
+            $ref: "#/components/schemas/MatterType"
+        - name: adminOwnerId
+          in: query
+          schema:
+            type: string
+        - name: responsibleLawyerId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Accounts work summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountsWorkSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /case/{businessKey}/accounts/history:
+    get:
+      operationId: getCaseAccountsHistory
+      summary: Get accounts lifecycle event history for a case
+      description: Returns persisted accounts lifecycle events.
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Accounts lifecycle event history.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountsEvent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /case/{businessKey}/accounts/readiness:
+    get:
+      operationId: getCaseAccountsReadiness
+      summary: Get accounts readiness for administrative opening
+      description: Returns the last persisted accounts readiness evaluation, or NOT_EVALUATED when no evaluation has run.
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Accounts readiness evaluation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountsReadinessEvaluation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /case/{businessKey}/accounts/evaluate-readiness:
+    post:
+      operationId: evaluateCaseAccountsReadiness
+      summary: Evaluate accounts readiness for administrative opening
+      description: |
+        Evaluates accounts setup through the resolved matter-type policy and persists
+        readiness status, structured reason codes, timestamp, and summary.
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Fresh accounts readiness evaluation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountsReadinessEvaluation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /case/{businessKey}/accounts/transition:
+    post:
+      operationId: transitionCaseAccounts
+      summary: Attempt an accounts lifecycle transition
+      description: |
+        Policy-driven accounts lifecycle endpoint. In Phase 3, activateAccounts
+        may move a matter to ACTIVE_CURRENT only when the resolved matter-type
+        policy passes. Other substantive transitions remain unsupported unless
+        the profile allows them.
+      tags: [Case Instance]
+      parameters:
+        - name: businessKey
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: transitionName
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/AccountsTransition"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountsTransitionRequest"
+      responses:
+        "200":
+          description: The updated case instance after a valid accounts transition.
           content:
             application/json:
               schema:

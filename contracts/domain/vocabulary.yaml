@@ -109,10 +109,14 @@ components:
         - Standalone product purchases remain in Commerce domain.
         - Do not overload matterType with orthogonal axes (billing model, referral source, etc.).
 
-        Enumerated values are defined by firm policy and may be extended by the Matter domain.
-        This schema intentionally does not enumerate all values — the Matter domain owns additions.
-      type: string
-      pattern: "^[A-Z_]+$"
+        Enumerated values are controlled by the Matter domain.
+      enum:
+        - FLAT_FEE
+        - HOURLY_CREDIT_CARD
+        - HOURLY_RETAINER
+        - SUBSCRIPTION_CREDIT_CARD
+        - SUBSCRIPTION_RETAINER
+        - COUNSEL
       x-domain: matter
       x-field-name: matterType
       x-explicitly-excluded: ["PRODUCT"]

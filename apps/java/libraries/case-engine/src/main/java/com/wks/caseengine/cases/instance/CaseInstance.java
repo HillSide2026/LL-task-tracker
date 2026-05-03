@@ -17,6 +17,7 @@ import java.util.List;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import com.wks.caseengine.cases.definition.CaseStatus;
+import com.wks.caseengine.cases.instance.accounts.AccountsEvent;
 import com.wks.caseengine.cases.instance.admin.AdminEvent;
 
 import lombok.AllArgsConstructor;
@@ -102,6 +103,79 @@ public class CaseInstance {
 
 	private String openedAt;
 
+	private String matterType;
+
+	private String billingPartyModel;
+
+	private String billingMode;
+
+	private String accountsProfile;
+
+	private Boolean billingSetupComplete;
+
+	private String flatFeeAmount;
+
+	private Boolean paymentMethodAuthorized;
+
+	private String paymentMethodRef;
+
+	private String retainerAmount;
+
+	private Boolean retainerFundsReceived;
+
+	private String subscriptionPlanId;
+
+	private String subscriptionPlanName;
+
+	private Boolean subscriptionActive;
+
+	private String instructingFirmId;
+
+	private String instructingFirmName;
+
+	private String counselBillingMode;
+
+	private Boolean counselBillingPartyOverride;
+
+	private String accountsStage;
+
+	private String accountsState;
+
+	private String accountsHealth;
+
+	@Default
+	private List<String> accountsHealthReasonCodes = new ArrayList<>();
+
+	private String accountsHealthEvaluatedAt;
+
+	private String accountsStaleSince;
+
+	private Boolean accountsMalformedCase;
+
+	private String accountsReadinessStatus;
+
+	@Default
+	private List<String> accountsReadinessReasonCodes = new ArrayList<>();
+
+	private String accountsReadinessEvaluatedAt;
+
+	private String accountsReadinessSummary;
+
+	private String accountsQueueId;
+
+	private String accountsNextActionOwnerType;
+
+	private String accountsNextActionSummary;
+
+	private String accountsNextActionDueAt;
+
+	private Boolean accountsWorkBlocked;
+
+	private String accountsWorkPriority;
+
+	@Default
+	private List<AccountsEvent> accountsEvents = new ArrayList<>();
+
 	@Default
 	private List<AdminEvent> adminEvents = new ArrayList<>();
 
@@ -156,6 +230,14 @@ public class CaseInstance {
 		}
 
 		this.adminEvents.add(adminEvent);
+	}
+
+	public void addAccountsEvent(final AccountsEvent accountsEvent) {
+		if (accountsEvents == null) {
+			this.accountsEvents = new ArrayList<>();
+		}
+
+		this.accountsEvents.add(accountsEvent);
 	}
 
 }

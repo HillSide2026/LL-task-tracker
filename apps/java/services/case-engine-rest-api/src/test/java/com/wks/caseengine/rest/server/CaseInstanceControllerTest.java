@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -38,6 +39,17 @@ import com.wks.bpm.engine.client.facade.BpmEngineClientFacade;
 import com.wks.caseengine.cases.definition.CaseDefinitionNotFoundException;
 import com.wks.caseengine.cases.instance.CaseInstance;
 import com.wks.caseengine.cases.instance.CaseInstanceNotFoundException;
+import com.wks.caseengine.cases.instance.accounts.AccountsEvent;
+import com.wks.caseengine.cases.instance.accounts.AccountsEventType;
+import com.wks.caseengine.cases.instance.accounts.AccountsHealthReasonCode;
+import com.wks.caseengine.cases.instance.accounts.AccountsLifecycleException;
+import com.wks.caseengine.cases.instance.accounts.AccountsLifecycleStage;
+import com.wks.caseengine.cases.instance.accounts.AccountsReadinessEvaluation;
+import com.wks.caseengine.cases.instance.accounts.AccountsReadinessStatus;
+import com.wks.caseengine.cases.instance.accounts.AccountsState;
+import com.wks.caseengine.cases.instance.accounts.AccountsTransition;
+import com.wks.caseengine.cases.instance.accounts.AccountsWorkQueue;
+import com.wks.caseengine.cases.instance.accounts.AccountsWorkSummary;
 import com.wks.caseengine.cases.instance.admin.AdminLifecycleException;
 import com.wks.caseengine.cases.instance.admin.AdminTransition;
 import com.wks.caseengine.cases.instance.service.CaseInstanceService;
@@ -206,6 +218,89 @@ public class CaseInstanceControllerTest {
 		this.mockMvc.perform(post("/case/{businessKey}/transition/{transitionName}", "BK-1",
 				"resumeFromMaintenanceClientWait").contentType(MediaType.APPLICATION_JSON)
 				.content("{\"nextActionSummary\":\"Resume maintenance work\"}")).andExpect(status().isBadRequest());
+	}
+
+	@Test
+	public void shouldReturnAccountsReasonCodesWhenAdminReadyToOpenGateBlocks() throws Exception {
+		when(caseInstanceService.transition(Mockito.eq("BK-1"), Mockito.eq(AdminTransition.MARK_READY_TO_OPEN),
+				Mockito.any())).thenThrow(new AdminLifecycleException(
+						"Accounts readiness must be READY before moving to Ready to Open",
+						List.of(AccountsHealthReasonCode.MISSING_BILLING_SETUP.getCode())));
+
+		this.mockMvc.perform(post("/case/{businessKey}/transition/{transitionName}", "BK-1", "markReadyToOpen")
+				.contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.reasonCodes[0]").value(AccountsHealthReasonCode.MISSING_BILLING_SETUP.getCode()));
+	}
+
+	@Test
+	public void shouldGetAccountsShell() throws Exception {
+		when(caseInstanceService.getAccounts("BK-1")).thenReturn(CaseInstance.builder().businessKey("BK-1")
+				.accountsStage(AccountsLifecycleStage.SETUP.getCode())
+				.accountsState(AccountsState.AWAITING_BILLING_SETUP.getCode()).build());
+
+		this.mockMvc.perform(get("/case/{businessKey}/accounts", "BK-1")).andExpect(status().isOk());
+	}
+
+	@Test
+	public void shouldGetAccountsHistory() throws Exception {
+		when(caseInstanceService.getAccountsHistory("BK-1")).thenReturn(List.of(AccountsEvent.builder()
+				.eventType(AccountsEventType.ACCOUNTS_INITIALIZED.getCode()).build()));
+
+		this.mockMvc.perform(get("/case/{businessKey}/accounts/history", "BK-1")).andExpect(status().isOk());
+	}
+
+	@Test
+	public void shouldRejectUnsupportedAccountsTransition() throws Exception {
+		when(caseInstanceService.transitionAccounts(Mockito.eq("BK-1"), Mockito.eq(AccountsTransition.ACTIVATE_ACCOUNTS),
+				Mockito.any())).thenThrow(new AccountsLifecycleException(
+						"Accounts activation blocked by policy",
+						List.of(AccountsHealthReasonCode.MISSING_BILLING_SETUP.getCode())));
+
+		this.mockMvc.perform(post("/case/{businessKey}/accounts/transition", "BK-1")
+				.contentType(MediaType.APPLICATION_JSON).content("{\"transition\":\"activateAccounts\"}"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.reasonCodes[0]").value(AccountsHealthReasonCode.MISSING_BILLING_SETUP.getCode()));
+	}
+
+	@Test
+	public void shouldGetAccountsReadiness() throws Exception {
+		when(caseInstanceService.getAccountsReadiness("BK-1")).thenReturn(AccountsReadinessEvaluation.builder()
+				.accountsReadinessStatus(AccountsReadinessStatus.NOT_EVALUATED.getCode()).build());
+
+		this.mockMvc.perform(get("/case/{businessKey}/accounts/readiness", "BK-1")).andExpect(status().isOk());
+	}
+
+	@Test
+	public void shouldEvaluateAccountsReadiness() throws Exception {
+		when(caseInstanceService.evaluateAccountsReadiness("BK-1")).thenReturn(AccountsReadinessEvaluation.builder()
+				.accountsReadinessStatus(AccountsReadinessStatus.READY.getCode()).build());
+
+		this.mockMvc.perform(post("/case/{businessKey}/accounts/evaluate-readiness", "BK-1"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.accountsReadinessStatus").value(AccountsReadinessStatus.READY.getCode()));
+	}
+
+	@Test
+	public void shouldGetAccountsWork() throws Exception {
+		when(caseInstanceService.findAccountsWork(Mockito.any())).thenReturn(PageResult.<CaseInstance>builder()
+				.content(List.of(CaseInstance.builder().businessKey("BK-1")
+						.accountsQueueId(AccountsWorkQueue.MISSING_RETAINER).build()))
+				.build());
+
+		this.mockMvc.perform(get("/case/accounts/work").param("accountsQueueId", AccountsWorkQueue.MISSING_RETAINER))
+				.andExpect(status().isOk());
+
+		Mockito.verify(caseInstanceService).findAccountsWork(Mockito.argThat(filter -> filter.getAccountsQueueId()
+				.orElse("").equals(AccountsWorkQueue.MISSING_RETAINER)));
+	}
+
+	@Test
+	public void shouldGetAccountsWorkSummary() throws Exception {
+		when(caseInstanceService.getAccountsWorkSummary(Mockito.any())).thenReturn(AccountsWorkSummary.builder()
+				.total(2).byQueue(java.util.Map.of(AccountsWorkQueue.MISSING_RETAINER, 2L)).build());
+
+		this.mockMvc.perform(get("/case/accounts/work/summary")).andExpect(status().isOk())
+				.andExpect(jsonPath("$.total").value(2));
 	}
 
 	@Test

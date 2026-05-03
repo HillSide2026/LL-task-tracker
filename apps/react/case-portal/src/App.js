@@ -8,6 +8,10 @@ import { RegisterInjectUserSession, RegisteOptions } from './plugins'
 import { accountStore, sessionStore } from './store'
 import RecordTypeChoice from './components/@formio/RecordTypeChoice'
 import { Formio } from 'formiojs'
+import {
+  AdminLifecycleStages,
+  getAdminWorkViewsByStage,
+} from 'common/adminLifecycle'
 import './App.css'
 
 const ScrollTop = lazy(() => import('./components/ScrollTop'))
@@ -51,6 +55,7 @@ const App = () => {
       previewMenu.items[1].children
         .find((menu) => menu.id === 'case-list')
         .children.push(
+          buildAdminWorkViewMenu(),
           {
             id: 'admin-opening',
             title: 'Matter Opening',
@@ -195,6 +200,7 @@ const App = () => {
       )
       if (caseListMenu) {
         caseListMenu.children = []
+        caseListMenu.children.push(buildAdminWorkViewMenu())
       }
     }
 
@@ -221,6 +227,35 @@ const App = () => {
     enableExternalLinkMenuItemIfRequired(menu)
 
     return setMenu(menu)
+  }
+
+  function buildAdminWorkViewMenu() {
+    return {
+      id: 'admin-work-views',
+      title: 'Admin Work Views',
+      type: 'collapse',
+      caption: 'Filtered queues under the five-stage lifecycle',
+      children: AdminLifecycleStages.map((stage) => {
+        const workViews = getAdminWorkViewsByStage(stage)
+
+        if (!workViews.length) {
+          return null
+        }
+
+        return {
+          id: `admin-stage-${stage.toLowerCase()}`,
+          title: stage,
+          type: 'collapse',
+          children: workViews.map((workView) => ({
+            id: workView.id,
+            title: workView.title,
+            type: 'item',
+            url: workView.url,
+            breadcrumbs: true,
+          })),
+        }
+      }).filter(Boolean),
+    }
   }
 
   return (
