@@ -2,11 +2,11 @@
 
 This folder is the deployment source of truth for running Levine LLP's matter platform at:
 
-- Portal: `https://matters.levinellp.ca`
-- Object storage API: `https://s3.matters.levinellp.ca`
-- Keycloak: `https://matters.levinellp.ca/auth`
-- Case API: `https://matters.levinellp.ca/api`
-- Storage API: `https://matters.levinellp.ca/storage`
+- Portal: `https://tasks.levinellp.ca`
+- Object storage API: `https://s3.tasks.levinellp.ca`
+- Keycloak: `https://tasks.levinellp.ca/auth`
+- Case API: `https://tasks.levinellp.ca/api`
+- Storage API: `https://tasks.levinellp.ca/storage`
 
 The compose stack uses Camunda 7 because it is the current Levine workflow runtime and the fastest path to a working matter portal. It uses Traefik and Let's Encrypt for HTTPS.
 
@@ -17,8 +17,8 @@ Some internal service identifiers still retain upstream WKS names for compatibil
 Create DNS records before starting the stack:
 
 ```text
-matters.levinellp.ca      A or CNAME -> deployment host
-s3.matters.levinellp.ca   A or CNAME -> deployment host
+tasks.levinellp.ca      A or CNAME -> deployment host
+s3.tasks.levinellp.ca   A or CNAME -> deployment host
 ```
 
 The companion `s3` hostname is required because document uploads and downloads use browser-facing pre-signed object-storage URLs.
@@ -50,16 +50,16 @@ cp deployments/levinellp/.env.example deployments/levinellp/.env
 
 Important values:
 
-- `APP_HOST=matters.levinellp.ca`
-- `S3_HOST=s3.matters.levinellp.ca`
-- `TENANT_REALM=matters`
+- `APP_HOST=tasks.levinellp.ca`
+- `S3_HOST=s3.tasks.levinellp.ca`
+- `TENANT_REALM=tasks`
 - `LETSENCRYPT_EMAIL=admin@levinellp.ca`
 - `KEYCLOAK_ADMIN_PASSWORD`
 - `KEYCLOAK_DEFAULT_USER_PASSWORD`
 - `KEYCLOAK_EXTERNALTASKS_SECRET`
 - `MINIO_ROOT_PASSWORD`
 
-The React portal derives its Keycloak realm from the first hostname segment. For `matters.levinellp.ca`, the realm must be `matters`.
+The React portal derives its Keycloak realm from the first hostname segment. For `tasks.levinellp.ca`, the realm must be `tasks`.
 
 ## Start
 
@@ -85,7 +85,7 @@ docker compose \
 Then visit:
 
 ```text
-https://matters.levinellp.ca
+https://tasks.levinellp.ca
 ```
 
 ## Verify
@@ -102,9 +102,9 @@ docker compose \
 Useful health URLs:
 
 ```text
-https://matters.levinellp.ca/auth
-https://matters.levinellp.ca/api/healthCheck
-https://s3.matters.levinellp.ca/minio/health/live
+https://tasks.levinellp.ca/auth
+https://tasks.levinellp.ca/api/healthCheck
+https://s3.tasks.levinellp.ca/minio/health/live
 ```
 
 ## Production Notes

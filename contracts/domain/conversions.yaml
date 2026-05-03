@@ -19,7 +19,7 @@ info:
     relationships between Commercial, Matter, and Commerce domain objects.
 
 servers:
-  - url: https://matters.levinellp.ca
+  - url: https://tasks.levinellp.ca
     description: Production (ll-task-tracker hosts Matter conversion endpoints)
 
 security:

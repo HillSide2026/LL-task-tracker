@@ -6,10 +6,10 @@ LL-task-tracker owns the Levine LLP internal operational task-management
 system at:
 
 ```text
-https://firm.levinellp.ca
+https://tasks.levinellp.ca
 ```
 
-The `firm.levinellp.ca` subdomain belongs to this app. It is separate from:
+The `tasks.levinellp.ca` subdomain belongs to this app. It is separate from:
 
 - `ll-corporate`, the primary client-facing app associated with `https://levinellp.ca`
 - `NDA-Esq`, the NDA Generator mounted at `https://levinellp.ca/nda`

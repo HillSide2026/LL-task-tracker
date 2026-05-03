@@ -2,7 +2,7 @@
   "name": "levine-matter-portal",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://matters.levinellp.ca",
+  "homepage": "https://tasks.levinellp.ca",
   "license": "MIT",
   "dependencies": {
     "@ant-design/icons": "^5.3.6",

@@ -4,12 +4,12 @@ import store from './index'
 jest.mock('keycloak-js')
 
 test('should initialize realm with subdomain when using dns', () => {
-  window.location.assign('https://matters.levinellp.ca/')
+  window.location.assign('https://tasks.levinellp.ca/')
 
   const { keycloak, realm, clientId } = store.bootstrap()
 
   expect(keycloak).not.toBeNull()
-  expect(realm).toEqual('matters')
+  expect(realm).toEqual('tasks')
   expect(clientId).toEqual('wks-portal')
 })
 

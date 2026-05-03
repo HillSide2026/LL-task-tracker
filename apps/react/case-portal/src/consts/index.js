@@ -62,7 +62,14 @@ function getEnv(key, defaultValue, fallback = '') {
     return normalizeEnv(key, fallback)
   }
 
-  return normalizeEnv(defaultValue, fallback)
+  // In production, prefer window.* (Docker envsubst). When unsubstituted
+  // (e.g. Vercel static hosting), fall back to REACT_APP_* build-time values.
+  const fromWindow = normalizeEnv(defaultValue, null)
+  if (fromWindow !== null) {
+    return fromWindow
+  }
+
+  return normalizeEnv(key, fallback)
 }
 
 function normalizeEnv(value, fallback) {

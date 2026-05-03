@@ -14,7 +14,7 @@ info:
     name: Levine Law Platform Team
 
 servers:
-  - url: https://matters.levinellp.ca
+  - url: https://tasks.levinellp.ca
     description: Production
   - url: http://localhost:8081
     description: Local development
