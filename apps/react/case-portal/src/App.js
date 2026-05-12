@@ -26,6 +26,7 @@ const App = () => {
   const [recordsTypes, setRecordsTypes] = useState([])
   const [casesDefinitions, setCasesDefinitions] = useState([])
   const [menu, setMenu] = useState({ items: [] })
+  const [authError, setAuthError] = useState(null)
 
   useEffect(() => {
     if (isVisualPreview) {
@@ -100,23 +101,29 @@ const App = () => {
 
     const { keycloak } = sessionStore.bootstrap()
 
-    keycloak.init({ onLoad: 'login-required' }).then((authenticated) => {
-      setKeycloak(keycloak)
-      setAuthenticated(authenticated)
-      buildMenuItems(keycloak)
-      RegisterInjectUserSession(keycloak)
-      RegisteOptions(keycloak)
-      forceLogoutIfUserNoMinimalRoleForSystem(keycloak)
-      registerExtensionModulesFormio()
-
-      const unsubscribe = MenuEventService.subscribeToMenuUpdates(() => {
+    keycloak
+      .init({ onLoad: 'login-required' })
+      .then((authenticated) => {
+        setKeycloak(keycloak)
+        setAuthenticated(authenticated)
         buildMenuItems(keycloak)
-      })
+        RegisterInjectUserSession(keycloak)
+        RegisteOptions(keycloak)
+        forceLogoutIfUserNoMinimalRoleForSystem(keycloak)
+        registerExtensionModulesFormio()
 
-      return () => {
-        if (unsubscribe) unsubscribe()
-      }
-    })
+        const unsubscribe = MenuEventService.subscribeToMenuUpdates(() => {
+          buildMenuItems(keycloak)
+        })
+
+        return () => {
+          if (unsubscribe) unsubscribe()
+        }
+      })
+      .catch((error) => {
+        console.error('Keycloak initialization failed:', error)
+        setAuthError('Unable to connect to the Levine LLP sign-in service.')
+      })
 
     keycloak.onAuthRefreshError = () => {
       window.location.reload()
@@ -147,6 +154,32 @@ const App = () => {
         })
     }
   }, [isVisualPreview])
+
+  if (authError) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          padding: 24,
+          fontFamily: 'Inter, Arial, sans-serif',
+          color: '#1f2a37',
+          background: '#f7f9fc',
+        }}
+      >
+        <div style={{ maxWidth: 520 }}>
+          <h1 style={{ marginBottom: 12, fontSize: 24 }}>
+            Sign-in service unavailable
+          </h1>
+          <p style={{ margin: 0, lineHeight: 1.6 }}>
+            {authError} Check the configured Keycloak URL and realm, then
+            refresh this page.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   function registerExtensionModulesFormio() {
     Formio.use(RecordTypeChoice)
