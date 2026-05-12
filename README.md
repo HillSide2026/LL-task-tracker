@@ -12,7 +12,7 @@ tracking for the firm.
 
 Production deployment:
 
-- `https://tasks.levinellp.ca`
+- `https://firm.levinellp.ca`
 
 The `ll-corporate` app may surface client-facing portal views through
 `https://levinellp.ca`, but workflow state, task ownership, and operational task
@@ -21,7 +21,7 @@ records remain owned here. `NDA-Esq` remains a separate NDA Generator mounted at
 
 ## Current Product Surface
 
-- Internal operations portal: `https://tasks.levinellp.ca`
+- Internal operations portal: `https://firm.levinellp.ca`
 - Deployment entrypoint: `deployments/levinellp`
 - Primary UI app: `apps/react/case-portal`
 - Primary backend API: `apps/java/services/case-engine-rest-api`

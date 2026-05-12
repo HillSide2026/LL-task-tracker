@@ -7,6 +7,10 @@ const Config = {
     window.KEYCLOAK_URL,
     '/auth',
   ),
+  KeycloakRealm: getEnv(
+    process.env.REACT_APP_KEYCLOAK_REALM,
+    window.KEYCLOAK_REALM,
+  ),
   StorageUrl: getEnv(process.env.REACT_APP_STORAGE_URL, window.STORAGE_URL),
   WebsocketsEnabled: getEnv(
     process.env.REACT_APP_WEBSOCKETS_ENABLED,
@@ -56,30 +60,21 @@ async function fetchNovuAppId() {
 }
 
 function getEnv(key, defaultValue, fallback = '') {
-  const isDev = process.env.NODE_ENV === 'development'
-
-  if (isDev && !!key) {
-    return normalizeEnv(key, fallback)
-  }
-
-  // In production, prefer window.* (Docker envsubst). When unsubstituted
-  // (e.g. Vercel static hosting), fall back to REACT_APP_* build-time values.
-  const fromWindow = normalizeEnv(defaultValue, null)
-  if (fromWindow !== null) {
-    return fromWindow
-  }
-
-  return normalizeEnv(key, fallback)
+  return normalizeEnv(key) || normalizeEnv(defaultValue) || fallback
 }
 
-function normalizeEnv(value, fallback) {
+function normalizeEnv(value) {
   if (value === undefined || value === null) {
-    return fallback
+    return ''
   }
 
   const normalized = String(value).trim()
-  if (!normalized || normalized.startsWith('$__SERVER_')) {
-    return fallback
+  if (
+    !normalized ||
+    normalized.startsWith('$__SERVER_') ||
+    normalized === 'MISSING_ENV_VAR'
+  ) {
+    return ''
   }
 
   return normalized

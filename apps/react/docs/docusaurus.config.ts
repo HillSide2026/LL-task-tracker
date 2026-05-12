@@ -5,7 +5,7 @@ import type * as Preset from "@docusaurus/preset-classic";
 const config: Config = {
   title: "Levine LLP Matter Platform",
   tagline: "Internal matter operations documentation",
-  url: "https://matters.levinellp.ca",
+  url: "https://firm.levinellp.ca",
   baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -72,7 +72,7 @@ const config: Config = {
           label: "Deployment",
         },
         {
-          href: "https://matters.levinellp.ca",
+          href: "https://firm.levinellp.ca",
           label: "Matter Portal",
           position: "right",
         },

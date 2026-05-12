@@ -2,11 +2,13 @@ import Keycloak from 'keycloak-js'
 import Config from '../../consts'
 
 function bootstrap() {
-  let realm = ''
+  let realm = Config.KeycloakRealm
   const clientId = 'wks-portal'
   const hostname = window.location.hostname
 
-  if (hostname !== 'localhost') {
+  if (realm) {
+    realm = realm.trim()
+  } else if (hostname !== 'localhost') {
     realm = hostname.substring(0, hostname.indexOf('.'))
   } else {
     realm = hostname

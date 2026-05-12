@@ -16,13 +16,23 @@ The browser must not call MongoDB, Camunda, seed loaders, or OPA directly.
 
 ## Frontend
 
-Runtime configuration is injected into the React portal through `public/index.html`.
+The React portal prefers build-provided `REACT_APP_*` values, which is the
+expected Vercel path. If those values are absent, it falls back to runtime
+values injected through `public/index.html`.
 
-Deployment values:
+Vercel deployment values:
 
-- `__SERVER_KEYCLOAK_URL__=/auth` or `https://matters.levinellp.ca/auth`
+- `REACT_APP_KEYCLOAK_URL=https://firm.levinellp.ca/auth`
+- `REACT_APP_KEYCLOAK_REALM=firm`
+- `REACT_APP_API_URL=https://firm.levinellp.ca/api`
+- `REACT_APP_STORAGE_URL=https://firm.levinellp.ca`
+
+Docker runtime values:
+
+- `__SERVER_KEYCLOAK_URL__=/auth` or `https://firm.levinellp.ca/auth`
+- `__SERVER_KEYCLOAK_REALM__=firm`
 - `__SERVER_API_URL__=/api`
-- `__SERVER_STORAGE_URL__=https://matters.levinellp.ca`
+- `__SERVER_STORAGE_URL__=https://firm.levinellp.ca`
 
 Local development can set:
 
